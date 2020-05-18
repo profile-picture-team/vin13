@@ -12,44 +12,42 @@ from MusicInfo import MusicInfo
 
 logger = logging.getLogger(__name__)
 
-
 class Downloader:
 	"""Класс для многопоточного скачивания файлов и управления ими."""
 	def __init__(self, threads = 4, folder = 'music/'):
-		logger.info('Creating Downloader...')
+		logger.info('Initializing Downloader...')
 		self.ready_files      = set()  # скаченные треки
 		self.queuFiles = queue.Queue() # треки для скачивания
 		self.processing_files = set()  # скачиваются или есть в очереди
 		self.setDowloadFolder(folder, False) # устанавливаем текущую папку загрузок
 
 		self.threads     = list()           # потоки-загрузчики
-		self.lockerQueue = threading.Lock() # аналог мьютекса 
+		self.lockerQueue = threading.Lock() # аналог мьютекса
 		self.stopSignal  = False            # сигнал потокам остановиться
-		
+
 		self.eventEmptyQueue = threading.Event()
 		self.eventEmptyQueue.clear()
 
 		# загружаем записи о треках в папке
-		logger.info('Load objects of MusicInfo')
 		filename = os.path.join(self.dowload_folder, 'records.json')
 		if os.path.exists(filename):
-			logger.info(f'Load from file \'{filename}\'')
+			logger.info(f'Load objects of MusicInfo from file \'{filename}\'')
 			with open(filename, 'r') as f:
 				self.ready_files = {MusicInfo.loadFromJSONFormat(mi_dict) for mi_dict in json.load(f)}
 		else:
-			logger.warning(f'File \'{filename}\' not found')
+			logger.warning(f'Can not load objects of MusicInfo. File \'{filename}\' not found')
 			self.ready_files = set()
 
 		# удаление записей без файла
 		self.deleteLostRecords()
-		
+
 		# удаление файлов которых нет в записях
 		self.deleteLostFiles()
 
 		# создаём и запускаем потоки
 		self.startThreads(threads)
 
-		logger.info('Downloader successfully created')
+		logger.info('Downloader successfully initialized')
 
 
 	def __del__(self):
@@ -68,7 +66,7 @@ class Downloader:
 	def getFilePath(self, mi):
 		"""
 			Возвращет полный путь до файла трека
-			Если файл не найдем возвращает None
+			Если файл не найден возвращает None
 		"""
 		filename = mi.track_id + mi.ext
 		file = os.path.join(self.dowload_folder, filename)
@@ -77,8 +75,8 @@ class Downloader:
 
 	def addFileInQueue(self, mi):
 		"""
-			Добавлет файл в очередь загрузки 
-			Если файл уже был скачем или присутствует в очерели,
+			Добавлет файл в очередь загрузки
+			Если файл уже был скачен или присутствует в очереди,
 			то не добавляет
 		"""
 		if mi in self.ready_files:
@@ -101,14 +99,14 @@ class Downloader:
 	def waitFileDowload(self, mi):
 		"""Ждет загрузки файла"""
 		# TODO: пересадить на события (threading.Event)
-		logger.info(f'Wait dowload file with id: {mi.track_id}')
+		logger.info(f'Wait until download file with id: {mi.track_id}')
 		while mi not in self.ready_files:
 			time.sleep(0.01)
 
 
 	def searchMusic(self, q, count = 0):
 		"""
-			Отправлет поисковый запрос на сервер
+			Отправляет поисковый запрос на сервер
 			Возвращает список объектов MusicInfo
 			При ошибке возвращает None
 		"""
@@ -116,13 +114,13 @@ class Downloader:
 			logger.info(f'Search request: "{q}"')
 			url = 'https://vk.music7s.cc/api/search.php'
 			params = {'search' : q, 'time' : time.time()}
-			responce = requests.get(url, params=params, timeout=10)
-			responce.raise_for_status()
-			data = responce.json()
+			response = requests.get(url, params=params, timeout=10)
+			response.raise_for_status()
+			data = response.json()
 		except requests.Timeout:
 			logger.error('Timed out')
 		except requests.HTTPError as err:
-			logger.error(f'Bad answer: {err.responce.status_code}')
+			logger.error(f'Bad answer: {err.response.status_code}')
 		except requests.ConnectionError:
 			logger.error('Connection error')
 		except requests.RequestException as err:
@@ -177,7 +175,7 @@ class Downloader:
 	def deleteLostFiles(self):
 		"""Удаляет файлы треков для которых нет записи"""
 		logger.info('Delete lost files...')
-		files = next(os.walk(self.dowload_folder))[2] # получаем список файлов в папке 
+		files = next(os.walk(self.dowload_folder))[2] # получаем список файлов в папке
 		for filename in files:
 			match = re.search(r'(\d+_\d+)\..+', filename)
 			if match is not None:
@@ -190,15 +188,15 @@ class Downloader:
 
 	def setDowloadFolder(self, folder, move_files = True):
 		"""Изменяет текущюу папку для файлов хранения фалов"""
-		logger.info('Edit dowload folder')
 		folder = os.path.abspath(folder)
+		logger.info('Set download folder to ' folder)
 		if not os.path.exists(folder): os.makedirs(folder)
 		if move_files: shutil.move(self.dowload_folder, folder)
 		self.dowload_folder = folder
 
 
 	def startThreads(self, threads = 4):
-		logger.info('Runing thread dowloaders...')
+		logger.info('Run download threads...')
 		for i in range(threads):
 			self.threads.append(
 				threading.Thread(
@@ -225,7 +223,7 @@ class Downloader:
 		logger.info('Running')
 		mi = None
 		while not self.stopSignal:
-			
+
 			# сюда может зайти только 1 поток
 			self.lockerQueue.acquire()
 			if not self.queuFiles.empty():
@@ -244,12 +242,12 @@ class Downloader:
 					logger.info(f'Download file with id: {mi.track_id}')
 					url = 'https://vk.music7s.cc/get.php'
 					params = {'id' : mi.track_id}
-					responce = requests.get(url, params=params, timeout=10)
-					responce.raise_for_status()
+					response = requests.get(url, params=params, timeout=10)
+					response.raise_for_status()
 				except requests.Timeout:
 					logger.error('Timed out')
 				except requests.HTTPError as err:
-					logger.error(f'Bad answer: {err.responce.status_code}')
+					logger.error(f'Bad response: {err.response.status_code}')
 				except requests.ConnectionError:
 					logger.error('Connection error')
 				except requests.RequestException as err:
@@ -257,7 +255,7 @@ class Downloader:
 				else:
 
 					# получаем и записываем расширение файла
-					match = re.search(r'filename=".*(\..+)"', responce.headers['Content-Disposition'])
+					match = re.search(r'filename=".*(\..+)"', response.headers['Content-Disposition'])
 					if match is not None:
 						mi.ext = match.group(1)
 					else:
@@ -270,10 +268,10 @@ class Downloader:
 
 					# запись в файл
 					logger.info(f'Save to file \'{filepath}\'')
-					open(filepath, 'wb').write(responce.content)
-					
+					open(filepath, 'wb').write(response.content)
+
 					# записываем размер файла
-					mi.size = len(responce.content)
+					mi.size = len(response.content)
 
 					# добавляем в список готовых файдов
 					self.ready_files.add(mi)
