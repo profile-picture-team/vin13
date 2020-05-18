@@ -7,15 +7,22 @@ import requests
 import time
 from collections import deque
 
+import logging
+import logging.config
+
+logging.config.fileConfig('conf/logging.conf')
+logger = logging.getLogger(__name__)
+
+logger.info('program start')
+
 token = os.getenv('BOT_TOKEN')
-#print(token)
 
 client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
 voices = {}
 
 @client.event
 async def on_ready():
-	print('CONNECTED')
+	logger.info('bot ready')
 	# client.remove_command('help')
 
 @client.command(pass_context = True)
@@ -55,7 +62,7 @@ async def play(ctx, name = ''):
 	if voice.is_paused():
 		voice.resume()
 
-	song_path = 'song.mp3'
+	song_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'song.mp3')
 
 	if not voice.is_playing():
 		voice.play(discord.FFmpegPCMAudio(song_path))
@@ -65,3 +72,5 @@ async def pause(ctx):
 	voices[ctx.message.guild.id].pause()
 
 client.run(token)
+#logger.info('bot stop')
+logger.info('program end')
