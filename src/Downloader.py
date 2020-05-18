@@ -12,7 +12,7 @@ from MusicInfo import MusicInfo
 
 logger = logging.getLogger(__name__)
 
-# TODO: добавить логирование
+
 class Downloader:
 	"""Класс для многопоточного скачивания файлов и управления ими."""
 	def __init__(self, threads = 4, folder = 'music/'):
@@ -100,7 +100,7 @@ class Downloader:
 
 	def waitFileDowload(self, mi):
 		"""Ждет загрузки файла"""
-		# TODO: пересодить на события (threading.Event)
+		# TODO: пересадить на события (threading.Event)
 		logger.info(f'Wait dowload file with id: {mi.track_id}')
 		while mi not in self.ready_files:
 			time.sleep(0.01)
@@ -221,6 +221,7 @@ class Downloader:
 
 	def targetDownloadThread(self):
 		"""Подпрограмма для потока-загрузчика"""
+		# TODO: пересадить на события (threading.Event)
 		logger.info('Running')
 		mi = None
 		while not self.stopSignal:
