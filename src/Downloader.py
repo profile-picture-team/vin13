@@ -14,28 +14,27 @@ logger = logging.getLogger(__name__)
 
 class Downloader:
 	"""Класс для многопоточного скачивания файлов и управления ими."""
-	def __init__(self, threads = 4, folder = 'music/'):
-		logger.info('Initializing Downloader...')
+	def __init__(self, threads = 4, folder = 'music/', record_filename = 'records.json'):
+		logger.info('Init Downloader...')
 		self.ready_files      = set()  # скаченные треки
 		self.queuFiles = queue.Queue() # треки для скачивания
 		self.processing_files = set()  # скачиваются или есть в очереди
 		self.setDowloadFolder(folder, False) # устанавливаем текущую папку загрузок
+		self.record_filepath = os.path.join(self.dowload_folder, record_filename)
 
 		self.threads     = list()           # потоки-загрузчики
 		self.lockerQueue = threading.Lock() # аналог мьютекса
 		self.stopSignal  = False            # сигнал потокам остановиться
 
 		self.eventEmptyQueue = threading.Event()
-		self.eventEmptyQueue.clear()
 
 		# загружаем записи о треках в папке
-		filename = os.path.join(self.dowload_folder, 'records.json')
-		if os.path.exists(filename):
-			logger.info(f'Load objects of MusicInfo from file \'{filename}\'')
-			with open(filename, 'r') as f:
+		if os.path.exists(self.record_filepath):
+			logger.info(f'Load records from file \'{self.record_filepath}\'')
+			with open(self.record_filepath, 'r') as f:
 				self.ready_files = {MusicInfo.loadFromJSONFormat(mi_dict) for mi_dict in json.load(f)}
 		else:
-			logger.warning(f'Can not load objects of MusicInfo. File \'{filename}\' not found')
+			logger.warning(f'File \'{self.record_filepath}\' not found')
 			self.ready_files = set()
 
 		# удаление записей без файла
@@ -47,7 +46,7 @@ class Downloader:
 		# создаём и запускаем потоки
 		self.startThreads(threads)
 
-		logger.info('Downloader successfully initialized')
+		logger.info('Downloader successfully inited')
 
 
 	def __del__(self):
@@ -69,8 +68,8 @@ class Downloader:
 			Если файл не найден возвращает None
 		"""
 		filename = mi.track_id + mi.ext
-		file = os.path.join(self.dowload_folder, filename)
-		if os.path.exists(file): return file
+		filepath = os.path.join(self.dowload_folder, filename)
+		if os.path.exists(filepath): return filepath
 
 
 	def addFileInQueue(self, mi):
@@ -80,10 +79,10 @@ class Downloader:
 			то не добавляет
 		"""
 		if mi in self.ready_files:
-			logger.info('File not added to queue: File ready.')
+			logger.info(f'File with id \'{mi.track_id}\' not added to queue: File ready.')
 			return
 		if mi in self.processing_files:
-			logger.info('File not added to queue: File is being processed')
+			logger.info(f'File with id \'{mi.track_id}\' not added to queue: File is being processed')
 			return
 		self.processing_files.add(mi)
 		self.queuFiles.put(mi)
@@ -147,10 +146,10 @@ class Downloader:
 	def deleteFile(self, mi):
 		"""Удаляет файл и запись о нем"""
 		logger.info(f'Delete file with id: {mi.track_id}')
-		path = self.getFilePath(mi)
-		if path is not None:
-			os.remove(path)
-		else: logger.warning(f'File \'{path}\' not found')
+		filepath = self.getFilePath(mi)
+		if filepath is not None:
+			os.remove(filepath)
+		else: logger.warning(f'File \'{filepath}\' not found')
 		if mi in self.ready_files:
 			self.ready_files.remove(mi)
 		else: logger.warning(f'Record \'{mi.track_id}\' not found')
@@ -177,19 +176,19 @@ class Downloader:
 		logger.info('Delete lost files...')
 		files = next(os.walk(self.dowload_folder))[2] # получаем список файлов в папке
 		for filename in files:
-			match = re.search(r'(\d+_\d+)\..+', filename)
+			match = re.search(r'(-?\d+_\d+)\..+', filename)
 			if match is not None:
 				track_id = match.group(1)
 				if MusicInfo(track_id=track_id) not in self.ready_files:
-					logger.info(f'Delete file \'{filename}\'')
-					file = os.path.join(self.dowload_folder, filename)
-					os.remove(file)
+					logger.warning(f'Delete file \'{filename}\'')
+					filepath = os.path.join(self.dowload_folder, filename)
+					os.remove(filepath)
 
 
 	def setDowloadFolder(self, folder, move_files = True):
 		"""Изменяет текущюу папку для файлов хранения фалов"""
 		folder = os.path.abspath(folder)
-		logger.info('Set download folder to ' folder)
+		logger.info(f'Set download folder to {folder}')
 		if not os.path.exists(folder): os.makedirs(folder)
 		if move_files: shutil.move(self.dowload_folder, folder)
 		self.dowload_folder = folder
@@ -283,7 +282,6 @@ class Downloader:
 
 
 	def saveMIRecordsToJson(self):
-		filename = os.path.join(self.dowload_folder, 'records.json')
-		logger.info(f'Save records to json file \'{filename}\'...')
-		with open(filename, 'w') as fp:
-			json.dump(list(self.ready_files), fp, default=MusicInfo.toJSONFormat, ensure_ascii=False, indent=4)
+		logger.info(f'Save records to json file \'{self.record_filepath}\'...')
+		with open(self.record_filepath, 'w') as fp:
+			json.dump(list(self.ready_files), fp, default=MusicInfo.toJSONFormat, ensure_ascii=False, indent=2)
