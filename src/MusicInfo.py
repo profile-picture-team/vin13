@@ -11,7 +11,7 @@
 
 class MusicInfo:
 	""" Контейнер для хранения информации о треках """
-	def __init__(self, title = None, artist = None, track_id = None, ext = None, time = None, image_url = None, size = None):
+	def __init__(self, title = None, artist = None, track_id = None, ext = None, time = None, image_url = None, filepath = None, size = None):
 		self.title     = title     # название трека
 		self.artist    = artist    # исполнитель
 		self.track_id  = track_id  # id трэка в сервисе
@@ -19,6 +19,7 @@ class MusicInfo:
 		self.time      = time      # длительность в секундах
 		self.size      = size      # размер аудио файла в байтах
 		self.image_url = image_url # иконка трека
+		self.filepath  = filepath  # полный путь до файла
 
 	def __hash__(self):
 		return self.track_id.__hash__()
