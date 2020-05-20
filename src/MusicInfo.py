@@ -11,7 +11,16 @@
 
 class MusicInfo:
 	""" Контейнер для хранения информации о треках """
-	def __init__(self, title = None, artist = None, track_id = None, ext = None, time = None, image_url = None, filepath = None, size = None):
+	def __init__(self,
+		title     = None,
+		artist    = None,
+		track_id  = None,
+		ext       = None,
+		time      = None,
+		size      = None,
+		image_url = None,
+		filepath  = None
+	):
 		self.title     = title     # название трека
 		self.artist    = artist    # исполнитель
 		self.track_id  = track_id  # id трэка в сервисе
@@ -46,7 +55,8 @@ class MusicInfo:
 			ext       = json_dict['ext'],
 			time      = json_dict['time'],
 			size      = json_dict['size'],
-			image_url = json_dict['image_url']
+			image_url = json_dict['image_url'],
+			filepath  = json_dict['filepath']
 		)
 
 	# метод для модуля json
