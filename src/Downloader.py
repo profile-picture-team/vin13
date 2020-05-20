@@ -62,15 +62,17 @@ class Downloader:
 		return mi in self.ready_files
 
 
-	def getFilePath(self, mi):
-		"""
-			Возвращет полный путь до файла трека
-			Если файл не найден возвращает None
-		"""
+	def generateFilePath(self, mi):
+		""" Генерирует полный путь до файла трека """
 		filename = mi.track_id + mi.ext
 		filepath = os.path.join(self.dowload_folder, filename)
-		if os.path.exists(filepath): return filepath
+		return filepath
 
+
+	def isExits(self, mi):
+		""" Проверяет существование соответствующего файла """
+		filepath = self.generateFilePath(mi)
+		return os.path.exists(filepath)
 
 	def addFileInQueue(self, mi):
 		"""
@@ -90,15 +92,15 @@ class Downloader:
 
 
 	def waitAllDownloads(self):
-		"""Блокирует поток пока очередь загрузок не станет пустой"""
+		""" Ждет пустой очереди загрузок """
 		logger.debug('Wait event \'Empty queue\'')
 		self.eventEmptyQueue.wait()
 
 
 	def waitFileDowload(self, mi):
-		"""Ждет загрузки файла"""
+		""" Ждет загрузки файла """
 		# TODO: пересадить на события (threading.Event)
-		logger.info(f'Wait until download file with id: {mi.track_id}')
+		logger.info(f'Waiting to download file with id \'{mi.track_id}\'')
 		while mi not in self.ready_files:
 			time.sleep(0.01)
 
@@ -122,8 +124,8 @@ class Downloader:
 			logger.error(f'Bad answer: {err.response.status_code}')
 		except requests.ConnectionError:
 			logger.error('Connection error')
-		except requests.RequestException as err:
-			logger.error(f'Unforeseen exception: {err.__class__.__name}: {err}')
+		except requests.RequestException:
+			logger.exception(f'Unforeseen exception')
 		else:
 			if data['error']:
 				return []
@@ -144,10 +146,10 @@ class Downloader:
 
 
 	def deleteFile(self, mi):
-		"""Удаляет файл и запись о нем"""
-		logger.info(f'Delete file with id: {mi.track_id}')
-		filepath = self.getFilePath(mi)
-		if filepath is not None:
+		""" Удаляет файл и запись о нем """
+		logger.info(f'Delete file with id \'{mi.track_id}\'')
+		filepath = self.generateFilePath(mi)
+		if self.isExits(mi):
 			os.remove(filepath)
 		else: logger.warning(f'File \'{filepath}\' not found')
 		if mi in self.ready_files:
@@ -156,15 +158,18 @@ class Downloader:
 
 
 	def deleteLostRecords(self):
-		"""Удаляет записи без файла"""
+		""" Удаляет записи без файла """
 		# отмечаем записи для удаления, если файл не найден
 		logger.info('Marking recoreds for delete...')
 		records_for_remove = list()
 		for mi in self.ready_files:
-			if self.getFilePath(mi) is None:
+			if not self.isExits(mi):
 				# файл не найден
 				logger.info(f'Mark \'{mi.track_id}\'')
 				records_for_remove.append(mi)
+			elif mi.filepath is not None:
+				logger.warning(f'Record \'{mi.track_id}\' was absent a file path')
+				mi.filepath = self.generateFilePath(mi)
 
 		# удаляем отмеченные записи
 		logger.info('Delete marked records...')
@@ -172,7 +177,7 @@ class Downloader:
 
 
 	def deleteLostFiles(self):
-		"""Удаляет файлы треков для которых нет записи"""
+		""" Удаляет файлы треков для которых нет записи """
 		logger.info('Delete lost files...')
 		files = next(os.walk(self.dowload_folder))[2] # получаем список файлов в папке
 		for filename in files:
@@ -186,9 +191,9 @@ class Downloader:
 
 
 	def setDowloadFolder(self, folder, move_files = True):
-		"""Изменяет текущюу папку для файлов хранения фалов"""
+		""" Изменяет текущюу папку для файлов хранения фалов """
 		folder = os.path.abspath(folder)
-		logger.info(f'Set download folder to {folder}')
+		logger.info(f'Set download folder to \'{folder}\'')
 		if not os.path.exists(folder): os.makedirs(folder)
 		if move_files: shutil.move(self.dowload_folder, folder)
 		self.dowload_folder = folder
@@ -238,7 +243,7 @@ class Downloader:
 
 			if mi is not None:
 				try:
-					logger.info(f'Download file with id: {mi.track_id}')
+					logger.info(f'Download file with id \'{mi.track_id}\'')
 					url = 'https://vk.music7s.cc/get.php'
 					params = {'id' : mi.track_id}
 					response = requests.get(url, params=params, timeout=10)
@@ -249,8 +254,8 @@ class Downloader:
 					logger.error(f'Bad response: {err.response.status_code}')
 				except requests.ConnectionError:
 					logger.error('Connection error')
-				except requests.RequestException as err:
-					logger.error(f'Unforeseen exception: {err.__class__.__name}: {err}')
+				except requests.RequestException:
+					logger.exception(f'Unforeseen exception')
 				else:
 
 					# получаем и записываем расширение файла
@@ -268,6 +273,7 @@ class Downloader:
 					# запись в файл
 					logger.info(f'Save to file \'{filepath}\'')
 					open(filepath, 'wb').write(response.content)
+					mi.filepath = filepath
 
 					# записываем размер файла
 					mi.size = len(response.content)
