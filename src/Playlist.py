@@ -1,10 +1,11 @@
 import random
 
+from MusicInfo import MusicInfo
 
 class Playlist:
 
 	def __init__(self, init_list = list(), loop = False):
-		self.record_list = list(init_list)
+		self.record_list = [MusicInfo(el) for el in init_list]
 		self.position    = 0
 		self.loop        = bool(loop)
 
@@ -18,6 +19,7 @@ class Playlist:
 		else: return None
 
 
+
 	def prev(self):
 		if self.loop or self.position > 0:
 			self.position -= 1
@@ -28,6 +30,7 @@ class Playlist:
 
 
 	def add(self, mi):
+		if not MusicInfo.isCorrect(mi): return False
 		if mi not in self.record_list:
 			self.record_list.append(mi)
 			return True
@@ -41,22 +44,34 @@ class Playlist:
 		else: return False
 
 
-	def mix(self): random.shuffle(self.record_list)
+	def mix(self):
+		random.shuffle(self.record_list)
+		self.position = 0
 
 
-	def getSize(self): return len(self.record_list)
+	def getLength(self): return len(self.record_list)
 
 
 	def getPosition(self): return self.position
 
-	def setPosition(self, pos): self.position = pos
+
+	def setPosition(self, pos):
+		try:
+			pos = int(pos)
+			if 0 <= pos < self.getLength():
+				self.position = pos
+				return True
+			else: return False
+		except: return False
 
 
 	def getAll(self): return self.record_list
+
 
 	def getCurrent(self): return self.record_list[self.position]
 
 
 	def isLoop(self): return self.loop
-	
+
+
 	def setLoop(self, flag): self.loop = bool(flag)
