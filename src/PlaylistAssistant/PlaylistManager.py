@@ -8,7 +8,7 @@ class PlaylistManager:
 	def __init__(self):
 		self.playlists = dict()
 
-	def getPlalist(self, pl_id):
+	def getPlaylist(self, pl_id):
 		"""
 			Возвращает плейлист по id
 			Бросает KeyError, если плейлист не существует

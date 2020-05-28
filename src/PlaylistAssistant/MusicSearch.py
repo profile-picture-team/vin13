@@ -50,7 +50,7 @@ def musicSearchVK(q, count = 0):
 				artist = item['artist'],
 				time = sum([a*b for a,b in zip([3600, 60, 1], map(int, item['duration'].split(':')))]),
 				image_url = item['image'],
-				filepath = os.path.join('https://vk.music7s.cc/', item['url'])
+				filepath = 'https://vk.music7s.cc' + item['url']
 			)
 			result.append(mi)
 		return result
