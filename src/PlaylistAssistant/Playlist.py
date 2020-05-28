@@ -44,6 +44,13 @@ class Playlist:
 		else: return False
 
 
+	def deleteByPosition(self, pos: int):
+		try:
+			pos = int(pos)
+			del self.record_list[pos]
+			return True
+		except: return False
+
 	def mix(self):
 		random.shuffle(self.record_list)
 		self.position = 0
@@ -55,7 +62,7 @@ class Playlist:
 	def getPosition(self): return self.position
 
 
-	def setPosition(self, pos):
+	def setPosition(self, pos: int):
 		try:
 			pos = int(pos)
 			if 0 <= pos < self.getLength():
@@ -71,12 +78,12 @@ class Playlist:
 	def getCurrent(self): return self.record_list[self.position]
 
 	def getByPosition(self, pos: int):
-		if 0 <= pos < self.getLength():
+		try:
+			pos = int(pos)
 			return self.record_list[pos]
-		else: return None
-
+		except: return None
 
 	def isLoop(self): return self.loop
 
 
-	def setLoop(self, flag): self.loop = bool(flag)
+	def setLoop(self, flag: bool): self.loop = bool(flag)
