@@ -49,7 +49,8 @@ def musicSearchVK(q, count = 0):
 				title = item['title'],
 				artist = item['artist'],
 				time = sum([a*b for a,b in zip([3600, 60, 1], map(int, item['duration'].split(':')))]),
-				image_url = item['image'],
+				# пока так
+				image_url = item['image'] if item['image'] else 'https://androidan.ru/uploads/mini/icons/af/1584900924_pi-music-player-1.png',
 				filepath = 'https://vk.music7s.cc' + item['url']
 			)
 			result.append(mi)
