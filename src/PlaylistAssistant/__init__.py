@@ -9,11 +9,11 @@
 # циганские фокусы
 folder = __file__[:-11]
 import sys
-sys.path.append(folder)
+sys.path.insert(0, folder)
 
 from PlaylistManager import PlaylistManager
 from Playlist import Playlist
 from MusicInfo import MusicInfo
 import MusicSearch
 
-del sys.path[-1]
+del sys.path[0]
