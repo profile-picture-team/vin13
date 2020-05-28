@@ -19,7 +19,6 @@ class Playlist:
 		else: return None
 
 
-
 	def prev(self):
 		if self.loop or self.position > 0:
 			self.position -= 1
@@ -38,16 +37,17 @@ class Playlist:
 
 
 	def delete(self, mi):
-		if mi in self.record_list:
-			self.record_list.remove(mi)
-			return True
-		else: return False
+		try:
+			pos = self.record_list.index(mi)
+			return self.deleteByPosition(pos)
+		except: return False
 
 
 	def deleteByPosition(self, pos: int):
 		try:
-			pos = int(pos)
+			pos = int(pos) % self.getLength()
 			del self.record_list[pos]
+			if pos <= self.position: self.position -= 1
 			return True
 		except: return False
 
@@ -64,7 +64,7 @@ class Playlist:
 
 	def setPosition(self, pos: int):
 		try:
-			pos = int(pos)
+			pos = int(pos) % self.getLength()
 			if 0 <= pos < self.getLength():
 				self.position = pos
 				return True
