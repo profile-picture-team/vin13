@@ -1,5 +1,4 @@
 import time
-import os.path
 import requests
 
 import logging
@@ -48,8 +47,8 @@ def musicSearchVK(q, count = 0):
 		result = list()
 		for item in items:
 			mi = MusicInfo(
-				title = item.get('title', 'Отсутствует'),
-				artist = item.get('artist', 'Отсутствует'),
+				title = item.get('title'),
+				artist = item.get('artist'),
 				time = sum([a*b for a,b in zip([3600, 60, 1], map(int, item.get('duration', '0:0:0').split(':')))]),
 				image_url = item.get('image'),
 				filepath = 'https://vk.music7s.cc' + item['url'] # оставил так, потому что это очень важное поле
@@ -58,4 +57,10 @@ def musicSearchVK(q, count = 0):
 			if mi.image_url is None:
 				mi.image = default_image
 			result.append(mi)
+
+			# другие названия пересекаются с реальными названиями и именми
+			if mi.title is None:  logger.warning(f'{mi.filepath} - Not found title');  mi.title  = 'error'
+			if mi.artist is None: logger.warning(f'{mi.filepath} - Not found artist'); mi.artist = 'error'
+			if mi.time == 0: logger.warning(f'{mi.filepath} - Music duration is zero')
+
 		return result
