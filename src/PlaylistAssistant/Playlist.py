@@ -70,6 +70,11 @@ class Playlist:
 
 	def getCurrent(self): return self.record_list[self.position]
 
+	def getByPosition(self, pos: int):
+		if 0 <= pos < self.getLength():
+			return self.record_list[pos]
+		else: return None
+
 
 	def isLoop(self): return self.loop
 
