@@ -26,3 +26,4 @@ class MusicInfo:
 		   not isinstance(mi.image_url, str) or \
 		   not isinstance(mi.filepath, str) \
 		: return False
+		return True

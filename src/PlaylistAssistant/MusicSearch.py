@@ -2,15 +2,15 @@ import time
 import os.path
 import requests
 
-from Playlist import Playlist
-
 import logging
 logger = logging.getLogger(__name__)
+
+from MusicInfo import MusicInfo
 
 def musicSearch(service, q, count = 0):
 	""" Вызывает функцию поиска для соответствующего сервиса """
 	service = str(service)
-	if service.lower() == 'vk': return Playlist.musicSearchVK(q, count)
+	if service.lower() == 'vk': return musicSearchVK(q, count)
 
 def musicSearchVK(q, count = 0):
 	"""
@@ -45,7 +45,7 @@ def musicSearchVK(q, count = 0):
 		items = data['items'][:count] if count != 0 else data['items']
 		result = list()
 		for item in items:
-			mi = Playlist.MusicInfo(
+			mi = MusicInfo(
 				title = item['title'],
 				artist = item['artist'],
 				time = sum([a*b for a,b in zip([3600, 60, 1], map(int, item['duration'].split(':')))]),
