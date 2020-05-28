@@ -7,6 +7,8 @@ logger = logging.getLogger(__name__)
 
 from MusicInfo import MusicInfo
 
+default_image = 'resources/default_image.png'
+
 def musicSearch(service, q, count = 0):
 	""" Вызывает функцию поиска для соответствующего сервиса """
 	service = str(service)
@@ -46,12 +48,14 @@ def musicSearchVK(q, count = 0):
 		result = list()
 		for item in items:
 			mi = MusicInfo(
-				title = item['title'],
-				artist = item['artist'],
-				time = sum([a*b for a,b in zip([3600, 60, 1], map(int, item['duration'].split(':')))]),
-				# пока так
-				image_url = item['image'] if item['image'] else 'https://androidan.ru/uploads/mini/icons/af/1584900924_pi-music-player-1.png',
-				filepath = 'https://vk.music7s.cc' + item['url']
+				title = item.get('title', 'Отсутствует'),
+				artist = item.get('artist', 'Отсутствует'),
+				time = sum([a*b for a,b in zip([3600, 60, 1], map(int, item.get('duration', '0:0:0').split(':')))]),
+				image_url = item.get('image'),
+				filepath = 'https://vk.music7s.cc' + item['url'] # оставил так, потому что это очень важное поле
 			)
+			# если отсутствует ссылка на картинку, то устанавливаем ссылку на локальную дефолтную картинку
+			if mi.image_url is None:
+				mi.image = default_image
 			result.append(mi)
 		return result
