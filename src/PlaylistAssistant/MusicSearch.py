@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 from MusicInfo import MusicInfo
 
-default_image = 'resources/default_image.png'
+default_image = 'https://cdn.c4.r-99.com/sites/default/files/imagecache/300o/product-images/1079817/Txq4UA3IBSWt7vF0EWVykA.png'
 
 def musicSearch(service, q, count = 0):
 	""" Вызывает функцию поиска для соответствующего сервиса """
