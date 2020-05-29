@@ -20,7 +20,8 @@ from PlaylistAssistant.MusicInfo import MusicInfo
 
 PM = PlaylistManager()
 
-pl_img = 'https://img.icons8.com/pastel-glyph/2x/search--v2.png'
+pl_img = 'https://img.icons8.com/pastel-glyph/2x/playlist--v2.png'
+search_img = 'https://img.icons8.com/pastel-glyph/2x/search--v2.png'
 
 def Bot():
 	voices = {}
@@ -68,6 +69,17 @@ def Bot():
 		else:
 			await ctx.send('А как какать?')
 
+	def check_for_play(author):
+		def inner_check(message):
+			if message.author != author:
+				return False
+			try:
+				int(message.content)
+				return True
+			except ValueError:
+				return False
+		return inner_check
+
 	@client.command()
 	async def play(ctx, *args):
 		if await join(ctx) == False:
@@ -84,19 +96,36 @@ def Bot():
 		pl = PM.getPlaylist(pl_id)
 
 		if song_q:
-			mi = MS.musicSearch('vk', song_q, 1)
+			mi = MS.musicSearch('vk', song_q, 5)
 			if not mi:
 				await ctx.send('Ошибка поиска!')
 				return
-			mi = mi[0]
+			if len(mi) > 0:
+				emb_desc = str()
+				for i in range(0, len(mi)):
+					emb_desc = emb_desc + f'{i} :  {mi[i].artist} - {mi[i].title}\n'
+				emb = discord.Embed(title='', description=emb_desc, color=0x007D80)
+				emb.set_author(name = 'выберите песню', icon_url = search_img)
+				await ctx.send(embed = emb)
+			else:
+				await ctx.send('Ничего не найдено!')
+				return
 
+			try:
+				msg = await client.wait_for('message', check=check_for_play(ctx.author), timeout=20)
+			except:
+				mi = mi[0]
+			msg = msg.content
+			if int(msg) >= len(mi):
+				mi = mi[0]
+			else:
+				mi = mi[int(msg)]
 			if pl.add(mi) == True:
 				await ctx.send(f'Добавил: {mi.artist} - {mi.title}')
 			else:
 				await ctx.send('Ошибка добавления!')
 				return
 
-		# мб потом добавлю отпраление сообщения, что начал играть песню
 		if not voice.is_playing() and pl.getLength() > 0:
 			def my_after(error):
 				if pl.getLength() > 0:
