@@ -20,8 +20,8 @@ from PlaylistAssistant.MusicInfo import MusicInfo
 
 PM = PlaylistManager()
 
-pl_img = 'https://img.icons8.com/pastel-glyph/2x/playlist--v2.png'
-search_img = 'https://img.icons8.com/pastel-glyph/2x/search--v2.png'
+pl_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png'
+search_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/search--v2.png'
 
 def Bot():
 	voices = {}

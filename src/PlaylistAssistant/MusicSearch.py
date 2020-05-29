@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 from MusicInfo import MusicInfo
 
-default_image = 'https://img.icons8.com/color/96/000000/music-record--v1.png'
+default_image = 'https://img.icons8.com/pastel-glyph/FFFFFF/music-record.png'
 
 def musicSearch(service, q, count = 0):
 	""" Вызывает функцию поиска для соответствующего сервиса """
@@ -55,7 +55,7 @@ def musicSearchVK(q, count = 0):
 			)
 			# если отсутствует ссылка на картинку, то устанавливаем ссылку на локальную дефолтную картинку
 			if mi.image_url is None:
-				mi.image = default_image
+				mi.image_url = default_image
 			result.append(mi)
 
 			# другие названия пересекаются с реальными названиями и именми
