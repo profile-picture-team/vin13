@@ -45,7 +45,10 @@ class Playlist:
 
 	def deleteByPosition(self, pos: int):
 		try:
-			pos = int(pos) % self.getLength()
+			pos = int(pos)
+			# если индекс нисёт негативную энергию, то исправим это
+			if pos < 0: pos = self.getLength() + pos
+			if not (0 <= pos < self.getLength()): return False
 			del self.record_list[pos]
 			if pos <= self.position: self.position -= 1
 			return True
