@@ -20,6 +20,8 @@ from PlaylistAssistant.MusicInfo import MusicInfo
 
 PM = PlaylistManager()
 
+pl_img = 'https://img.icons8.com/pastel-glyph/2x/search--v2.png'
+
 def Bot():
 	voices = {}
 	client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
@@ -28,7 +30,7 @@ def Bot():
 	client_loop = asyncio.get_event_loop()
 
 	def get_mi_embed(mi):
-		emb = discord.Embed(colour = 0x00FFFF)
+		emb = discord.Embed(colour = 0x007D80)
 		emb.set_author(name = f'{mi.artist} - {mi.title} [ {mi.time} сек ]', icon_url = mi.image_url)
 		return emb
 
@@ -43,7 +45,7 @@ def Bot():
 		try:
 			channel = ctx.message.author.voice.channel
 		except:
-			await ctx.send('Присоединись к каналу мудак')
+			await ctx.send('Присоединись к каналу, мудак')
 			return False
 
 		voice = get(client.voice_clients, guild = ctx.guild)
@@ -52,6 +54,7 @@ def Bot():
 			await voice.move_to(channel)
 		else:
 			voice = await channel.connect()
+			await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу {channel}', colour = 0x007D80))
 		voices[ctx.message.guild.id] = voice
 		return True
 		# await ctx.send(f'бот присоединился к каналу: {channel}')
@@ -61,7 +64,7 @@ def Bot():
 		voice = get(client.voice_clients, guild = ctx.guild)
 		if voice and voice.is_connected():
 			await voice.disconnect()
-			await ctx.send('Бот отключился')
+			await ctx.send(embed = discord.Embed(description=':no_entry: Бот отключился', colour = 0x007D80))
 		else:
 			await ctx.send('А как какать?')
 
@@ -122,7 +125,8 @@ def Bot():
 		if PM.isExistPlaylist(pl_id):
 			pl = PM.getPlaylist(pl_id)
 			if pl.getLength() > 0:
-				await ctx.send(embed = get_mi_embed(pl.getCurrent()))
+				mic = pl.getCurrent()
+				await ctx.send(embed = get_mi_embed(mic))
 				#await ctx.send(f'Сейчас играет: {mi.artist} - {mi.title}')
 
 	@client.command()
@@ -160,11 +164,24 @@ def Bot():
 	async def queue(ctx):
 		pl_id = ctx.message.guild.id
 		if PM.isExistPlaylist(pl_id):
-			mis = PM.getPlaylist(pl_id).getAll()
-			to_send = str()
-			for mi in mis:
-				to_send = to_send + f'‎• {mi.artist} - {mi.title} [ {mi.time} сек ]\n'
-			await ctx.send(to_send)
+			pl = PM.getPlaylist(pl_id)
+			mis = pl.getAll()
+			if len(mis) > 0:
+				to_send = str()
+				curr_id = pl.getPosition()
+				for i in range(0, curr_id):
+					to_send = to_send + f'{i} :  {mis[i].artist} - {mis[i].title}\n'
+				to_send = to_send + f' -> {curr_id} :  {mis[curr_id].artist} - {mis[curr_id].title}\n'
+				for i in range(curr_id + 1, len(mis)):
+					to_send = to_send + f'{i} :  {mis[i].artist} - {mis[i].title}\n'
+				emb = discord.Embed(title='', description=to_send, color=0x007D80)
+				emb.set_author(name = 'текущий плейлист', icon_url = pl_img)
+
+				await ctx.send(embed = emb)
+			else:
+				await ctx.send('Плейлист пуст')
+		else:
+			await ctx.send('Плейлист не создан')
 
 	client.run(os.getenv('BOT_TOKEN'))
 
