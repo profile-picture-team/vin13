@@ -41,6 +41,19 @@ def Bot():
 		logger.info('Bot ready')
 		# client.remove_command('help')
 
+	@client.event
+	async def on_error(event, *args, **kwargs):
+		message = args[0]
+		logger.error(traceback.format_exc())
+		await client.send_message(message.channel, ":anger:ОШИБКА!!!")
+
+	@client.event
+	async def on_command_error(ctx, error):
+		if isinstance(error, commands.CheckFailure):
+			await ctx.send('Не дорос ещё!')
+		if isinstance(error, commands.CommandNotFound):
+			await ctx.send('Глаза разуй!')
+
 	@client.command(pass_context = True)
 	async def join(ctx):
 		try:
@@ -113,13 +126,13 @@ def Bot():
 
 			try:
 				msg = await client.wait_for('message', check=check_for_play(ctx.author), timeout=20)
+				msg = msg.content
+				if int(msg) >= len(mi):
+					mi = mi[0]
+				else:
+					mi = mi[int(msg)]
 			except:
 				mi = mi[0]
-			msg = msg.content
-			if int(msg) >= len(mi):
-				mi = mi[0]
-			else:
-				mi = mi[int(msg)]
 			if pl.add(mi) == True:
 				await ctx.send(f'Добавил: {mi.artist} - {mi.title}')
 			else:
@@ -182,12 +195,19 @@ def Bot():
 					old_main_pos = pl.getPosition()
 					if pl.deleteByPosition(id_to_remove):
 						await ctx.send(f'Удалил: {mi.artist} - {mi.title} :fire:')
-					if old_main_pos == id_to_remove:
-						voice.stop() #await skip(ctx)
+						if old_main_pos == id_to_remove:
+							voice.stop()
+					else:
+						await ctx.send('Ошибка удаления')
+				else:
+					await ctx.send('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..')
 
 	@remove.error
 	async def remove_error(ctx, error):
-		await ctx.send('Ты кто такой, сука, чтоб это делать?')
+		if isinstance(error, commands.MissingRequiredArgument):
+			await ctx.send('Введи номер песни в плейлисте, которую хочешь убрать, если плейлист/песня под таким номером существует. Нумерация с нуля!')
+		elif isinstance(error, commands.BadArgument):
+			await ctx.send('Ты кто такой, сука, чтоб это делать?')
 
 	@client.command()
 	async def queue(ctx):
