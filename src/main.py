@@ -34,6 +34,7 @@ def Bot():
 
 	@client.event
 	async def on_ready():
+		await client.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="aplha ver."))
 		logger.info('Bot ready')
 		# client.remove_command('help')
 
