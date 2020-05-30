@@ -6,6 +6,7 @@ import os, sys
 import requests
 import time
 import asyncio
+import json
 
 import logging
 import logging.config
@@ -23,9 +24,25 @@ PM = PlaylistManager()
 pl_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png'
 search_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/search--v2.png'
 
+prefix = os.getenv('PREFIX')
+
+help_path = 'conf/help.json'
+help_short_descriptions = {}
+help_short_descriptions_str = str()
+help_descriptions = {}
+
+with open(help_path, encoding='utf-8') as json_file:
+	data = json.load(json_file)
+	help_short_descriptions = data['short-descriptions']
+	help_descriptions       = data['descriptions']
+	maxl                    = len(max(help_short_descriptions, key = lambda x: len(x)))
+	for p in help_short_descriptions:
+		help_short_descriptions_str += '```' + prefix + p.ljust(maxl, ' ') + '  : ' + help_short_descriptions[p] + '```'
+
 def Bot():
 	voices = {}
-	client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
+	client = commands.Bot(command_prefix=prefix, case_insensitive=True)
+	client.remove_command('help')
 
 	global client_loop
 	client_loop = asyncio.get_event_loop()
@@ -37,9 +54,8 @@ def Bot():
 
 	@client.event
 	async def on_ready():
-		await client.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="aplha ver."))
+		await client.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name="alpha ver."))
 		logger.info('Bot ready')
-		# client.remove_command('help')
 
 	@client.event
 	async def on_error(event, *args, **kwargs):
@@ -51,8 +67,14 @@ def Bot():
 	async def on_command_error(ctx, error):
 		if isinstance(error, commands.CheckFailure):
 			await ctx.send('Не дорос ещё!')
-		if isinstance(error, commands.CommandNotFound):
-			await ctx.send('Глаза разуй!')
+		elif isinstance(error, commands.CommandNotFound):
+			await ctx.send('Глаза разуй! ' + prefix + 'help для справки')
+		elif isinstance(error, commands.MissingRequiredArgument):
+			await ctx.send(prefix + 'help для справки')
+		elif isinstance(error, commands.BadArgument):
+			await ctx.send('Ты кто такой, сука, чтоб это делать?')
+		else:
+			logger.exception(error)
 
 	@client.command(pass_context = True)
 	async def join(ctx):
@@ -71,7 +93,6 @@ def Bot():
 			await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу {channel}', colour = 0x007D80))
 		voices[ctx.message.guild.id] = voice
 		return True
-		# await ctx.send(f'бот присоединился к каналу: {channel}')
 
 	@client.command()
 	async def leave(ctx):
@@ -116,7 +137,7 @@ def Bot():
 			if len(mi) > 0:
 				emb_desc = str()
 				for i in range(0, len(mi)):
-					emb_desc = emb_desc + f'{i} :  {mi[i].artist} - {mi[i].title}\n'
+					emb_desc += f'{i} :  {mi[i].artist} - {mi[i].title}\n'
 				emb = discord.Embed(title='', description=emb_desc, color=0x007D80)
 				emb.set_author(name = 'выберите песню', icon_url = search_img)
 				await ctx.send(embed = emb)
@@ -169,7 +190,6 @@ def Bot():
 			if pl.getLength() > 0:
 				mic = pl.getCurrent()
 				await ctx.send(embed = get_mi_embed(mic))
-				#await ctx.send(f'Сейчас играет: {mi.artist} - {mi.title}')
 
 	@client.command()
 	async def pause(ctx):
@@ -183,8 +203,9 @@ def Bot():
 	@client.command()
 	async def remove(ctx, id_to_remove: int):
 		try:
-			voice = voices[ctx.message.guild.id] # я знаю про ctx.message.guild.id in voices, но мне лень
+			voice = voices[ctx.message.guild.id]
 		except:
+			await ctx.send('Туз не на месте')
 			return
 		pl_id = ctx.message.guild.id
 		if PM.isExistPlaylist(pl_id):
@@ -201,13 +222,8 @@ def Bot():
 						await ctx.send('Ошибка удаления')
 				else:
 					await ctx.send('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..')
-
-	@remove.error
-	async def remove_error(ctx, error):
-		if isinstance(error, commands.MissingRequiredArgument):
-			await ctx.send('Введи номер песни в плейлисте, которую хочешь убрать, если плейлист/песня под таким номером существует. Нумерация с нуля!')
-		elif isinstance(error, commands.BadArgument):
-			await ctx.send('Ты кто такой, сука, чтоб это делать?')
+		else:
+			await ctx.send('Ты говоришь, что в казино в запечатанных колодах карты разложены по-другому?!')
 
 	@client.command()
 	async def queue(ctx):
@@ -219,10 +235,10 @@ def Bot():
 				to_send = str()
 				curr_id = pl.getPosition()
 				for i in range(0, curr_id):
-					to_send = to_send + f'{i} :  {mis[i].artist} - {mis[i].title}\n'
-				to_send = to_send + f' -> {curr_id} :  {mis[curr_id].artist} - {mis[curr_id].title}\n'
+					to_send += f'{i} :  {mis[i].artist} - {mis[i].title}\n'
+				to_send += f' -> {curr_id} :  {mis[curr_id].artist} - {mis[curr_id].title}\n'
 				for i in range(curr_id + 1, len(mis)):
-					to_send = to_send + f'{i} :  {mis[i].artist} - {mis[i].title}\n'
+					to_send += f'{i} :  {mis[i].artist} - {mis[i].title}\n'
 				emb = discord.Embed(title='', description=to_send, color=0x007D80)
 				emb.set_author(name = 'текущий плейлист', icon_url = pl_img)
 
@@ -231,6 +247,17 @@ def Bot():
 				await ctx.send('Плейлист пуст')
 		else:
 			await ctx.send('Плейлист не создан')
+
+	@client.command()
+	async def help(ctx, cmnd=""):
+		if not cmnd or not cmnd in help_descriptions:
+			await ctx.send(help_short_descriptions_str)
+			return
+		help_str = prefix + cmnd + ' :\n'
+		p = help_descriptions[cmnd]
+		help_str += p['description']
+		help_str += '\n\nПример: ' + prefix + p['example']
+		await ctx.send('```' + help_str + '```')
 
 	client.run(os.getenv('BOT_TOKEN'))
 
