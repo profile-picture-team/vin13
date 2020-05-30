@@ -135,9 +135,9 @@ def Bot():
 				await ctx.send('Ошибка поиска!')
 				return
 			if len(mi) > 0:
-				emb_desc = str()
+				emb_desc = '0 : Отмена\n'
 				for i in range(0, len(mi)):
-					emb_desc += f'{i} :  {mi[i].artist} - {mi[i].title}\n'
+					emb_desc += f'{i + 1} :  {mi[i].artist} - {mi[i].title}\n'
 				emb = discord.Embed(title='', description=emb_desc, color=0x007D80)
 				emb.set_author(name = 'выберите песню', icon_url = search_img)
 				await ctx.send(embed = emb)
@@ -147,11 +147,15 @@ def Bot():
 
 			try:
 				msg = await client.wait_for('message', check=check_for_play(ctx.author), timeout=20)
-				msg = msg.content
-				if int(msg) >= len(mi):
-					mi = mi[0]
+				msg = int(msg.content) - 1
+				if msg != -1:
+					if msg >= len(mi):
+						mi = mi[0]
+					else:
+						mi = mi[msg]
 				else:
-					mi = mi[int(msg)]
+					await ctx.send('Отменено!')
+					return
 			except:
 				mi = mi[0]
 			if pl.add(mi) == True:
