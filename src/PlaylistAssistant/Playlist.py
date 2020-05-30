@@ -16,7 +16,7 @@ class Playlist:
 			if self.position >= len(self.record_list):
 				self.position = 0
 			return self.record_list[self.position]
-		else: return None
+		else: return self.getCurrent()
 
 
 	def prev(self):
@@ -25,7 +25,7 @@ class Playlist:
 			if self.position <= 0:
 				self.position = len(self.record_list) - 1
 			return self.record_list[self.position]
-		else: return None
+		else: return self.getCurrent()
 
 
 	def add(self, mi):
@@ -46,7 +46,7 @@ class Playlist:
 	def deleteByPosition(self, pos: int):
 		try:
 			pos = int(pos)
-			# если индекс нисёт негативную энергию, то исправим это
+			# если индекс несёт негативную энергию, то исправим это
 			if pos < 0: pos = self.getLength() + pos
 			if not (0 <= pos < self.getLength()): return False
 			del self.record_list[pos]
@@ -67,11 +67,10 @@ class Playlist:
 
 	def setPosition(self, pos: int):
 		try:
-			pos = int(pos) % self.getLength()
-			if 0 <= pos < self.getLength():
-				self.position = pos
-				return True
-			else: return False
+			pos = int(pos)
+			if pos < 0: pos = self.getLength() + pos
+			if not (0 <= pos < self.getLength()): return False
+			return True
 		except: return False
 
 
@@ -83,6 +82,8 @@ class Playlist:
 	def getByPosition(self, pos: int):
 		try:
 			pos = int(pos)
+			if pos < 0: pos = self.getLength() + pos
+			if not (0 <= pos < self.getLength()): return None
 			return self.record_list[pos]
 		except: return None
 
