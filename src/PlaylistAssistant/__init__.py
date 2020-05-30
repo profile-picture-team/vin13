@@ -14,6 +14,6 @@ sys.path.insert(0, folder)
 from PlaylistManager import PlaylistManager
 from Playlist import Playlist
 from MusicInfo import MusicInfo
-import MusicSearch
+from MusicSearch import musicSearch, musicSearchVK
 
 del sys.path[0]
