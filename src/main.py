@@ -8,7 +8,7 @@ import logging.config
 logging.config.fileConfig('conf/logging.conf')
 logger = logging.getLogger(__name__)
 
-from Channel import Channel
+from Server import Server
 import Bot
 
 # надо разобраться с этими логреми
@@ -82,7 +82,7 @@ help_docs = load_help_docs('conf/help.json', os.getenv('PREFIX'))
 def main():
 	try:
 		logger.info('Program start')
-		Channel.generate_embed = Bot.get_mi_embed
+		Server.generate_embed = Bot.generate_embed_from_mi
 		Bot.help_docs = help_docs
 		Bot.client.run(os.getenv('BOT_TOKEN'))
 	except KeyboardInterrupt:

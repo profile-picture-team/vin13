@@ -6,8 +6,8 @@ import discord
 
 logger = logging.getLogger(__name__)
 
-Channel_loop = asyncio.get_event_loop()
-class Channel:
+Server_loop = asyncio.get_event_loop()
+class Server:
 
 	generate_embed = lambda mi: discord.Embed()
 
@@ -20,24 +20,22 @@ class Channel:
 		self.playing_thread = threading.Thread(target = self.target)
 
 	def target(self):
-		channel_id = self.ctx.message.guild.id
-		logger.debug(f'Channel: {channel_id}. Start playing thread with name: {threading.current_thread().getName()}')		
+		server_id = self.ctx.message.guild.id
+		logger.debug(f'Server: {server_id}. Start playing thread with name: {threading.current_thread().getName()}')		
 
 		def my_after(error):
 			self.eventNextTrack.set()
 
-		logger.debug(f'Channel: {channel_id}. Start loop')
+		logger.debug(f'Server: {server_id}. Start loop')
 		while self.playlist.getLength() > 0 and self.voice.is_connected():
 			mi = self.playlist.next()
 			self.eventNextTrack.clear()
 			self.voice.play(discord.FFmpegPCMAudio(mi.filepath), after=my_after)
-			send_fut = asyncio.run_coroutine_threadsafe(self.ctx.send(embed = Channel.generate_embed(mi)), Channel_loop)
+			send_fut = asyncio.run_coroutine_threadsafe(self.ctx.send(embed = Server.generate_embed(mi)), Server_loop)
 			send_fut.result()
-			#asyncio.run(self.ctx.send(embed=get_mi_embed(mi)))
-			#сука как
 			self.eventNextTrack.wait()
-			logger.debug(f'Channel: {channel_id}. Next track')
-		logger.debug(f'Channel: {channel_id}. Stop loop')
+			logger.debug(f'Server: {server_id}. Next track')
+		logger.debug(f'Server: {server_id}. Stop loop')
 		self.loop_started = False
 
 	def start(self):
