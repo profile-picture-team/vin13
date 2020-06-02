@@ -23,7 +23,7 @@ def generate_main_page(main_content, prefix, left_margin=3, color_scheme=''):
 	commands = main_content['commands']
 	maxl = len(max(commands.keys(), key=lambda x: len(x)))
 	patern = ' '*left_margin + '{prx}{cmd:'+str(maxl)+'} - {des}\n'
-	
+
 	main = str()
 	for command in commands.keys():
 		main += patern.format(
@@ -41,15 +41,15 @@ def generate_cmd_page(cmd_name, cmd_content, prefix, left_margin=3, color_scheme
 	header = 'Справка: {}{}\n'.format(prefix, cmd_name)
 	if cmd_content is None:
 		return f"```{color_scheme}\n" + header + '\nСтраница отсутствует\n```'
-	
+
 	description = ('\n'.join(cmd_content['description']) +'\n').format(prx=prefix)
-	
+
 	if len(cmd_content.get('templates', [])) > 0:
 		templates = '\nШаблоны:\n'
 		for template in cmd_content['templates']:
 			templates += ' '*left_margin + prefix + template + '\n'
 	else: templates = ''
-	
+
 	if len(cmd_content.get('examples', [])) > 0:
 		examples = '\nПримеры:\n'
 		for example in cmd_content['examples']:
@@ -76,14 +76,11 @@ def load_help_docs(filepath, prefix):
 
 	return help_docs
 
-help_docs = load_help_docs('conf/help.json', os.getenv('PREFIX'))
-
-
 def main():
 	try:
 		logger.info('Program start')
 		Server.generate_embed = Bot.generate_embed_from_mi
-		Bot.help_docs = help_docs
+		Bot.help_docs = load_help_docs('conf/help.json', os.getenv('PREFIX'))
 		Bot.client.run(os.getenv('BOT_TOKEN'))
 	except KeyboardInterrupt:
 		logger.warning('Interrupted')

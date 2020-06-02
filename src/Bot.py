@@ -30,7 +30,7 @@ async def on_ready():
 		status=discord.Status.online,
 		activity=discord.Activity(
 			type=discord.ActivityType.watching,
-			name="аниме"
+			name="hentai"
 		)
 	)
 	logger.info('Bot ready')
@@ -38,33 +38,32 @@ async def on_ready():
 @client.event
 async def on_error(event, *args, **kwargs):
 	message = args[0]
-	traceback = kwargs['traceback']
-	logger.error(traceback.format_exc())
+	logger.exception('on_error')
 	await client.send_message(message.channel, ":anger: ОШИБКА!!!")
 
-
-"""
 @client.event
 async def on_command_error(ctx, error):
 	if isinstance(error, commands.CheckFailure):
 		await ctx.send('Не дорос ещё!')
-	if isinstance(error, commands.CommandNotFound):
-		await ctx.send('Глаза разуй!')
-"""
-
+	elif isinstance(error, commands.CommandNotFound):
+		await ctx.send(f'Глаза разуй! Такой команды нет! `{ctx.prefix}help` - для справки')
+	elif isinstance(error, commands.MissingRequiredArgument) or isinstance(error, commands.BadArgument):
+		await ctx.send(f'Глаза разуй! Такого аргумента нет! `{ctx.prefix}help {ctx.command}` - для справки')
+	else:
+		logger.exception(error)
 
 @client.command(pass_context = True)
 async def join(ctx, **kwargs):
 	from_user = kwargs.get('from_user', True)
 	server_id = ctx.message.guild.id
 	logger.debug(f'Server: {server_id}. Command \'join\'')
-	
+
 	try:
 		channel = ctx.author.voice.channel
 	except AttributeError:
 		await ctx.send('Присоединись к каналу, мудак')
 		return False
-	
+
 	voice = get(client.voice_clients, guild=ctx.guild)
 	if not (voice and voice.is_connected()):
 		voice = await channel.connect()
@@ -139,7 +138,7 @@ async def play(ctx, *args):
 				mi = mi_list[index - 1]
 				logger.debug(f'Server: {server_id}. Received message from author: {ctx.author}')
 				break
-			except IndexError: await ctx.send('Ты дурак? Тебе же показали какие цифры писать')
+			except IndexError: await ctx.send('Ты кто такой, сука, чтоб это делать?')
 	except asyncio.exceptions.TimeoutError:
 		await ctx.send('Кто не успел - тот опоздал')
 		return
@@ -167,7 +166,7 @@ async def playing(ctx):
 	if server.playlist.getLength() > 0:
 		mi = server.playlist.getCurrent()
 		await ctx.send(embed = generate_embed_from_mi(mi))
-		
+
 
 @client.command()
 async def pause(ctx):
@@ -183,12 +182,14 @@ async def remove(ctx, pos: int):
 	logger.debug(f'Server: {server_id}. Command \'remove\'')
 	if not server_id in servers:
 		logger.debug(f'Server: {server_id}. No server')
+		await ctx.send('Туз не на месте')
 		return
 	server = servers[server_id]
 	if server.playlist.getLength() == 0:
 		logger.debug(f'Server: {server_id}. Empty playlist')
+		await ctx.send('Ты говоришь, что в казино в запечатанных колодах карты разложены по-другому?!')
 		return
-	
+
 	mi = server.playlist.getByPosition(pos)
 	if mi is None:
 		await ctx.send('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..')
@@ -200,15 +201,6 @@ async def remove(ctx, pos: int):
 		if old_pos == pos: server.voice.stop()
 	else:
 		await ctx.send('Ошибка удаления')
-	
-"""
-@remove.error
-async def remove_error(ctx, error):
-	if isinstance(error, commands.MissingRequiredArgument):
-		await ctx.send('Введи номер песни в плейлисте, которую хочешь убрать, если плейлист/песня под таким номером существует. Нумерация с нуля!')
-	elif isinstance(error, commands.BadArgument):
-		await ctx.send('Ты кто такой, сука, чтоб это делать?')
-"""
 
 @client.command()
 async def queue(ctx):
@@ -242,4 +234,3 @@ async def help(ctx, cmd=''):
 		await ctx.send(help_docs['commands'][cmd])
 	else:
 		await ctx.send(help_docs['commands']['not-exist'].format(cmd=cmd))
-	

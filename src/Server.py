@@ -7,6 +7,7 @@ import discord
 logger = logging.getLogger(__name__)
 
 Server_loop = asyncio.get_event_loop()
+#discord server (guild)
 class Server:
 
 	generate_embed = lambda mi: discord.Embed()
@@ -21,7 +22,7 @@ class Server:
 
 	def target(self):
 		server_id = self.ctx.message.guild.id
-		logger.debug(f'Server: {server_id}. Start playing thread with name: {threading.current_thread().getName()}')		
+		logger.debug(f'Server: {server_id}. Start playing thread: {threading.current_thread().getName()}')
 
 		def my_after(error):
 			self.eventNextTrack.set()
