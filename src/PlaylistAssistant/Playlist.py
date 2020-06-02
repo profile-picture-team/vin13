@@ -91,3 +91,5 @@ class Playlist:
 
 
 	def setLoop(self, flag: bool): self.loop = bool(flag)
+
+	def isEnd(self): return self.position + 1 >= self.getLength()
