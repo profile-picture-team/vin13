@@ -31,7 +31,7 @@ class Server:
 		while self.playlist.getLength() > 0 and self.voice.is_connected():
 			mi = self.playlist.next()
 			self.eventNextTrack.clear()
-			self.voice.play(discord.FFmpegPCMAudio(mi.filepath), after=my_after)
+			self.voice.play(discord.FFmpegOpusAudio(mi.filepath), after=my_after)
 			send_fut = asyncio.run_coroutine_threadsafe(self.ctx.send(embed = Server.generate_embed(mi)), Server_loop)
 			send_fut.result()
 			self.eventNextTrack.wait()
