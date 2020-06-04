@@ -77,8 +77,7 @@ def load_help_docs(filepath, prefix):
 def main():
 	try:
 		logger.info('Program start')
-		#Bot.help_docs = load_help_docs('conf/help.json', os.getenv('PREFIX'))
-		Bot.help_docs = load_help_docs('conf/temp_help.json', os.getenv('PREFIX'))
+		Bot.help_docs = load_help_docs('conf/help.json', os.getenv('PREFIX'))
 		Bot.client.run(os.getenv('BOT_TOKEN'))
 	except KeyboardInterrupt:
 		logger.warning('Interrupted')
