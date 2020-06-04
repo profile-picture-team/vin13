@@ -9,9 +9,15 @@ from MusicInfo import MusicInfo
 default_image = 'https://img.icons8.com/pastel-glyph/FFFFFF/music-record.png'
 
 def musicSearch(service, q, count = 0):
-	""" Вызывает функцию поиска для соответствующего сервиса """
+	"""
+		Вызывает функцию поиска для соответствующего сервиса
+		Возвращает список объектов MusicInfo
+		При ошибке возвращает None
+	"""
 	service = str(service)
 	if service.lower() == 'vk': return musicSearchVK(q, count)
+	return None
+
 
 def musicSearchVK(q, count = 0):
 	"""
@@ -22,7 +28,7 @@ def musicSearchVK(q, count = 0):
 		Дата последней проверки апи: 27.05.2020
 	"""
 	try:
-		logger.info(f'Search request: {q}')
+		logger.debug(f'Search request: {q}')
 		url = 'https://vk.music7s.cc/api/search.php'
 		params = {'search' : q, 'time' : time.time()}
 		response = requests.get(url, params=params, timeout=10)
