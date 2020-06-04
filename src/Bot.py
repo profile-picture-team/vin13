@@ -1,6 +1,5 @@
 import  discord
 from discord.ext import commands
-from discord.utils import get
 
 import os
 import asyncio
@@ -11,11 +10,12 @@ logger = logging.getLogger(__name__)
 from PlaylistAssistant import *
 from Server import Server
 
-pl_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png'
+pl_img     = 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png'
 search_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/search--v2.png'
+list_img   = 'https://img.icons8.com/windows/96/FFFFFF/untested.png'
 
 def generate_embed_from_mi(mi):
-	emb = discord.Embed(colour = 0x007D80)
+	emb = discord.Embed(colour=0x007D80)
 	emb.set_author(name = f'{mi.artist} - {mi.title} [ {mi.time} сек ]', icon_url = mi.image_url)
 	return emb
 Server.generate_embed = generate_embed_from_mi
@@ -84,42 +84,73 @@ async def join(ctx, channel_name = '', **kwargs):
 			await ctx.send('Присоединись к каналу, мудак')
 			return False
 	else:
-		channels = [x for x in ctx.guild.voice_channels if x.name==channel_name]
+		channels = list(filter(lambda x: x.name==channel_name, ctx.guild.voice_channels))
 		if len(channels) == 0:
 			logger.debug(f'Server: {server_id}. Join error: Channel not found')
 			await ctx.send('Ты инвалид, а название канала неправильное')
 			return False
 		elif len(channels) > 1:
 			# даём пользователю выбрать канал по номеру в списке каналов
-			logger.debug(f'Server: {server_id}. Join error: Many options')
-			return False
+			emb_desc = '0. Отмена'
+			for i, channel in enumerate(channels):
+				emb_desc += f'\n{i+1} : {channel} ({channel.position+1}-й)'
+			emb = discord.Embed(description=emb_desc, color=0x007D80)
+			emb.set_author(name = 'выберите канал', icon_url = list_img)
+			await ctx.send(embed = emb)
+
+			def get_message_check(author):
+				def is_message_correct(message):
+					if message.author != author:
+						return False
+					return message.content.isdigit()
+				return is_message_correct
+
+			try:
+				msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
+				index = int(msg.content)
+
+				if index == 0:
+					logger.debug(f'Server: {server_id}. Joining canceled')
+					await ctx.send(embed = discord.Embed(description=f':warning: Подключение отменено', colour=0x007D80))
+					return False
+				if index > len(channels):
+					await ctx.send(embed = discord.Embed(description=f':no_entry: Пользователь дурак. Подключение отменено', colour=0x007D80))
+					return False
+				channel = channels[index - 1]
+			except asyncio.exceptions.TimeoutError:
+				logger.debug(f'Server: {server_id}. Join error: User answer timeout')
+				await ctx.send(embed = discord.Embed(description=f':warning: Подключение отменено', colour=0x007D80))
+				return False
 		else:
 			channel = channels[0]
 
-	voice = get(client.voice_clients, guild=ctx.guild)
-
-	if voice and voice.is_connected():
-		if voice.channel.name == channel.name:
-			logger.debug(f'Server: {server_id}. Join error: Already joined')
-			await ctx.send(embed = discord.Embed(description=f':warning: Бот уже подключен к каналу: {channel}', colour=0x007D80))
-			return True
-		await voice.move_to(channel)
-		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
-		await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour = 0x007D80))
+	if server_id in servers:
+		server = servers[server_id]
 	else:
-		voice = await channel.connect()
-		if from_user:
-			await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour = 0x007D80))
-
-	if not server_id in servers:
 		server = Server()
 		server.ctx = ctx
-		server.voice = voice
 		server.playlist = Playlist()
 		servers[server_id] = server
+
+	if server.voice is None:
+		server.voice = await channel.connect()
+		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
+		if from_user:
+			await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour=0x007D80))
+	elif server.voice.is_connected():
+		if server.voice.channel == channel:
+			logger.debug(f'Server: {server_id}. Join error: Already joined')
+			if from_user:
+				await ctx.send(embed = discord.Embed(description=f':warning: Бот уже подключен к каналу: {channel}', colour=0x007D80))
+			return True
+		await server.voice.move_to(channel)
+		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
+		await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour=0x007D80))
 	else:
-		# я не знаю нужно это вообще или нет, но на всякий случай впихнул
-		servers[server_id].voice = voice
+		await server.voice.move_to(channel)
+		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
+		if from_user:
+			await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour=0x007D80))
 
 	return True
 
@@ -129,7 +160,7 @@ async def leave(ctx):
 	server_id = ctx.message.guild.id
 	if server_id in servers:
 		await servers[server_id].voice.disconnect()
-		await ctx.send(embed = discord.Embed(description=':no_entry: Бот отключился', colour = 0x007D80))
+		await ctx.send(embed = discord.Embed(description=':no_entry: Бот отключился', colour=0x007D80))
 
 
 @client.command()
@@ -151,7 +182,7 @@ async def play(ctx, *args):
 	emb_desc = '0. Отмена'
 	for i, mi in enumerate(mi_list):
 		emb_desc += f'\n{i + 1} :  {mi.artist} - {mi.title}'
-	emb = discord.Embed(title='', description=emb_desc, color=0x007D80)
+	emb = discord.Embed(description=emb_desc, color=0x007D80)
 	emb.set_author(name = 'выберите песню', icon_url = search_img)
 	await ctx.send(embed = emb)
 
