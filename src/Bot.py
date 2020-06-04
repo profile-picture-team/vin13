@@ -18,11 +18,13 @@ def generate_embed_from_mi(mi):
 	emb = discord.Embed(colour = 0x007D80)
 	emb.set_author(name = f'{mi.artist} - {mi.title} [ {mi.time} сек ]', icon_url = mi.image_url)
 	return emb
+Server.generate_embed = generate_embed_from_mi
 
 client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
 client.remove_command('help')
 
 servers = dict() # id : Server.Server
+
 
 @client.event
 async def on_ready():
@@ -35,6 +37,7 @@ async def on_ready():
 	)
 	logger.info('Bot ready')
 
+"""
 @client.event
 async def on_error(event, *args, **kwargs):
 	message = args[0]
@@ -51,25 +54,62 @@ async def on_command_error(ctx, error):
 		await ctx.send(f'Глаза разуй! Такого аргумента нет! `{ctx.prefix}help {ctx.command}` - для справки')
 	else:
 		logger.exception(error)
+"""
+
+
+@client.command()
+async def help(ctx, cmd=''):
+	if cmd == '':
+		await ctx.send(help_docs['main-page'])
+	elif cmd == 'not-exist':
+		await ctx.send(help_docs['commands']['not-exist'].format(cmd=cmd))
+	elif cmd in help_docs['commands']:
+		await ctx.send(help_docs['commands'][cmd])
+	else:
+		await ctx.send(help_docs['commands']['not-exist'].format(cmd=cmd))
+
 
 @client.command(pass_context = True)
-async def join(ctx, **kwargs):
+async def join(ctx, channel_name = '', **kwargs):
 	from_user = kwargs.get('from_user', True)
 	server_id = ctx.message.guild.id
-	logger.debug(f'Server: {server_id}. Command \'join\'')
+	if from_user: logger.debug(f'Server: {server_id}. Joining...')
+	else: logger.debug(f'Server: {server_id}. Auto joining...')
 
-	try:
-		channel = ctx.author.voice.channel
-	except AttributeError:
-		await ctx.send('Присоединись к каналу, мудак')
-		return False
+	if channel_name == '':
+		try:
+			channel = ctx.author.voice.channel
+		except AttributeError:
+			logger.debug(f'Server: {server_id}. Join error: User is not connected')
+			await ctx.send('Присоединись к каналу, мудак')
+			return False
+	else:
+		channels = [x for x in ctx.guild.voice_channels if x.name==channel_name]
+		if len(channels) == 0:
+			logger.debug(f'Server: {server_id}. Join error: Channel not found')
+			await ctx.send('Ты инвалид, а название канала неправильное')
+			return False
+		elif len(channels) > 1:
+			# даём пользователю выбрать канал по номеру в списке каналов
+			logger.debug(f'Server: {server_id}. Join error: Many options')
+			return False
+		else:
+			channel = channels[0]
 
 	voice = get(client.voice_clients, guild=ctx.guild)
-	if not (voice and voice.is_connected()):
-		voice = await channel.connect()
+
+	if voice and voice.is_connected():
+		if voice.channel.name == channel.name:
+			logger.debug(f'Server: {server_id}. Join error: Already joined')
+			await ctx.send(embed = discord.Embed(description=f':warning: Бот уже подключен к каналу: {channel}', colour=0x007D80))
+			return True
+		await voice.move_to(channel)
+		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
 		await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour = 0x007D80))
-	elif from_user:
-		await ctx.send(embed = discord.Embed(description=f':warning: Бот уже подключен к каналу: {channel}', colour=0x007D80))
+	else:
+		voice = await channel.connect()
+		if from_user:
+			await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour = 0x007D80))
 
 	if not server_id in servers:
 		server = Server()
@@ -151,6 +191,14 @@ async def play(ctx, *args):
 
 
 @client.command()
+async def pause(ctx):
+	server_id = ctx.message.guild.id
+	logger.debug(f'Server: {server_id}. Command \'pause\'')
+	if server_id in servers:
+		servers[server_id].voice.pause()
+
+
+@client.command()
 async def skip(ctx):
 	server_id = ctx.message.guild.id
 	logger.debug(f'Server: {server_id}. Command \'skip\'')
@@ -166,14 +214,6 @@ async def playing(ctx):
 	if server.playlist.getLength() > 0:
 		mi = server.playlist.getCurrent()
 		await ctx.send(embed = generate_embed_from_mi(mi))
-
-
-@client.command()
-async def pause(ctx):
-	server_id = ctx.message.guild.id
-	logger.debug(f'Server: {server_id}. Command \'pause\'')
-	if server_id in servers:
-		servers[server_id].voice.pause()
 
 
 @client.command()
@@ -202,6 +242,7 @@ async def remove(ctx, pos: int):
 	else:
 		await ctx.send('Ошибка удаления')
 
+
 @client.command()
 async def queue(ctx):
 	server_id = ctx.message.guild.id
@@ -215,22 +256,10 @@ async def queue(ctx):
 	curr_id = server.playlist.getPosition()
 	for i, mi in enumerate(mi_list):
 		if i == curr_id:
-			to_send += f' -> {curr_id} :  {mi.artist} - {mi.title}\n'
+			to_send += f'**{i} :  {mi.artist} - {mi.title}**\n'
 		else:
 			to_send += f'{i} :  {mi.artist} - {mi.title}\n'
 
 	emb = discord.Embed(title='', description=to_send, color=0x007D80)
 	emb.set_author(name = 'текущий плейлист', icon_url = pl_img)
 	await ctx.send(embed = emb)
-
-
-@client.command()
-async def help(ctx, cmd=''):
-	if cmd == '':
-		await ctx.send(help_docs['main-page'])
-	elif cmd == 'not-exist':
-		await ctx.send(help_docs['commands']['not-exist'].format(cmd=cmd))
-	elif cmd in help_docs['commands']:
-		await ctx.send(help_docs['commands'][cmd])
-	else:
-		await ctx.send(help_docs['commands']['not-exist'].format(cmd=cmd))

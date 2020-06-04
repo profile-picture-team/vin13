@@ -1,5 +1,3 @@
-import  discord
-
 import os
 import json
 
@@ -8,7 +6,6 @@ import logging.config
 logging.config.fileConfig('conf/logging.conf')
 logger = logging.getLogger(__name__)
 
-from Server import Server
 import Bot
 
 # надо разобраться с этими логреми
@@ -76,11 +73,12 @@ def load_help_docs(filepath, prefix):
 
 	return help_docs
 
+
 def main():
 	try:
 		logger.info('Program start')
-		Server.generate_embed = Bot.generate_embed_from_mi
-		Bot.help_docs = load_help_docs('conf/help.json', os.getenv('PREFIX'))
+		#Bot.help_docs = load_help_docs('conf/help.json', os.getenv('PREFIX'))
+		Bot.help_docs = load_help_docs('conf/temp_help.json', os.getenv('PREFIX'))
 		Bot.client.run(os.getenv('BOT_TOKEN'))
 	except KeyboardInterrupt:
 		logger.warning('Interrupted')
