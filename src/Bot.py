@@ -37,11 +37,10 @@ async def on_ready():
 	)
 	logger.info('Bot ready')
 
-"""
 @client.event
 async def on_error(event, *args, **kwargs):
 	message = args[0]
-	logger.exception('on_error')
+	logger.exception('exception in on_error')
 	await client.send_message(message.channel, ":anger: ОШИБКА!!!")
 
 @client.event
@@ -54,7 +53,6 @@ async def on_command_error(ctx, error):
 		await ctx.send(f'Глаза разуй! Такого аргумента нет! `{ctx.prefix}help {ctx.command}` - для справки')
 	else:
 		logger.exception(error)
-"""
 
 
 @client.command()
@@ -159,9 +157,14 @@ async def join(ctx, channel_name = '', **kwargs):
 async def leave(ctx):
 	server_id = ctx.message.guild.id
 	if server_id in servers:
-		await servers[server_id].voice.disconnect()
-		await ctx.send(embed = discord.Embed(description=':no_entry: Бот отключился', colour=0x007D80))
-
+		voice = servers[server_id].voice
+		if voice.is_connected():
+			await voice.disconnect()
+			await ctx.send(embed = discord.Embed(description=':no_entry: Бот отключился', colour=0x007D80))
+		else:
+			await ctx.send('Этим можно просто брать и обмазываться')
+	else:
+		await ctx.send('Куда лезешь, хуесосина?')
 
 @client.command()
 async def play(ctx, *args):
@@ -234,17 +237,22 @@ async def skip(ctx):
 	server_id = ctx.message.guild.id
 	logger.debug(f'Server: {server_id}. Command \'skip\'')
 	if server_id in servers:
-		servers[server_id].voice.stop()
+		server = servers[server_id]
+		if server.playlist.getLength() == 0: await ctx.send('Скипалка не отросла'); return
+		server.voice.stop()
+	else:
+		await ctx.send('Может ты плейлист создашь прежде чем скипать?'); return
 
 
 @client.command()
 async def playing(ctx):
 	server_id = ctx.message.guild.id
-	if not server_id in servers: return
+	if not server_id in servers: await ctx.send('А у вас плейлист не создан'); return
 	server = servers[server_id]
 	if server.playlist.getLength() > 0:
-		mi = server.playlist.getCurrent()
-		await ctx.send(embed = generate_embed_from_mi(mi))
+		await ctx.send(embed = generate_embed_from_mi(server.playlist.getCurrent()))
+	else:
+		await ctx.send('Если долго всматриваться в пустоту, то ты увидишь этот плейлист')
 
 
 @client.command()
