@@ -1,5 +1,5 @@
 # Установка и запуск Windows / Linux (ставил на убунту)
-1. установить [ffmpeg](https://ffmpeg.org/) ***(и прописать его в PATH для windows)***
+1. установить [ffmpeg](https://ffmpeg.org/) ***(и прописать его в [PATH](http://g.zeos.in/?q=PATH%20windows) для Windows)***
 2. установить [pipenv](https://pypi.org/project/pipenv/) 
 3. установить зависимости через `pipenv install`
 4. ???
@@ -32,7 +32,7 @@
 
 в файле .env **должны** быть прописаны:
  * BOT_TOKEN - [токен бота дикорда](https://discord.com/developers/)
- * PREFIX - префикс для комманд бота (например !)
+ * PREFIX - префикс для команд бота (например: PREFIX=!)
  
 # План развития
  * удалить весь ~~говно~~код
