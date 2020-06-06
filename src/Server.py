@@ -12,33 +12,52 @@ class Server:
 
 	generate_embed = lambda mi: discord.Embed()
 
-	def __init__(self, ctx = None, voice = None, playlist = None):
+	def __init__(self, ctx, voice = None, playlist = None):
 		self.ctx = ctx
 		self.voice = voice
 		self.playlist = playlist
+		
 		self.eventNextTrack = threading.Event()
+		self.eventStartLoop = threading.Event()
+		self.stopSignal = False
 
-		self.playing_thread = threading.Thread(target = self.target)
+		self.playing_thread = threading.Thread(target = self.playlistLoop)
+		self.playing_thread.start()
 
-	def target(self):
-		server_id = self.ctx.message.guild.id
+
+	def playlistLoop(self):
+		server_id = self.ctx.guild.id
 		logger.debug(f'Server: {server_id}. Start playing thread: {threading.current_thread().getName()}')
 
 		def my_after(error):
 			self.eventNextTrack.set()
 
-		logger.debug(f'Server: {server_id}. Start loop')
-		while self.playlist.getLength() > 0 and self.voice.is_connected():
-			mi = self.playlist.next()
-			self.eventNextTrack.clear()
-			self.voice.play(discord.FFmpegOpusAudio(mi.filepath), after=my_after)
-			send_fut = asyncio.run_coroutine_threadsafe(self.ctx.send(embed = Server.generate_embed(mi)), Server_loop)
-			send_fut.result()
-			self.eventNextTrack.wait()
-			logger.debug(f'Server: {server_id}. Next track')
-		logger.debug(f'Server: {server_id}. Stop loop')
-		self.loop_started = False
+		while not self.stopSignal:
+			self.eventStartLoop.wait()
+
+			logger.debug(f'Server: {server_id}. Start loop')
+			while not self.stopSignal and self.playlist.getLength() > 0 and self.voice.is_connected():
+				mi = self.playlist.next()
+				self.eventNextTrack.clear()
+				self.voice.play(discord.FFmpegOpusAudio(mi.filepath), after=my_after)
+				asyncio.run_coroutine_threadsafe(self.ctx.send(embed = Server.generate_embed(mi)), Server_loop).result()
+				self.eventNextTrack.wait()
+				logger.debug(f'Server: {server_id}. Next track')
+			logger.debug(f'Server: {server_id}. Stop loop')
+			
+			self.eventStartLoop.clear()
+		logger.debug(f'Server: {server_id}. Playing thread died')
+		
 
 	def start(self):
-		if not self.playing_thread.is_alive() and self.playlist.getLength() > 0:
-			self.playing_thread.start()
+		self.eventStartLoop.set()
+
+	def stop(self):
+		server_id = self.ctx.guild.id
+		logger.debug(f'Server: {server_id}. Stop signal')
+		self.stopSignal = True
+		self.eventNextTrack.set()
+		while self.playing_thread.is_alive():
+			self.eventStartLoop.set()
+
+

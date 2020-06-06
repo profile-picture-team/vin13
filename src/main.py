@@ -24,10 +24,8 @@ def main():
 	except Exception as error:
 		logger.exception(error)
 	finally:
-		"""
 		for server in Bot.servers.values():
 			server.stop()
-		"""
 		logger.info('Program end.\n')
 
 if __name__ == '__main__': main()
