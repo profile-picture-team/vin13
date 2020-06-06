@@ -30,7 +30,7 @@
 в корневой папке **должны** существовать: папка log и файл .env
 
 в файле .env **должны** быть прописаны:
- * BOT_TOKEN - [токен бота дикорда](https://discord.com/developers)
+ * BOT_TOKEN - [токен бота дикорда](https://discord.com/developers/)
  * PREFIX - префикс для комманд бота (например !)
  
 # План развития
@@ -38,4 +38,4 @@
  * допилить команды
 
 # Благодарности
-спасибо [music7s](https://vk.music7s.cc/)
+спасибо [music7s](https://vk.music7s.cc/) и [icons8](https://icons8.com/)
