@@ -1,7 +1,7 @@
 # Установка и запуск Windows / Linux (ставил на убунту)
 1. установить [ffmpeg](https://ffmpeg.org/) ***(и прописать его в PATH для windows)***
 2. установить [pipenv](https://pypi.org/project/pipenv/) 
-3. установить зависимости через pipenv install
+3. установить зависимости через `pipenv install`
 4. ???
 5. профит
 
