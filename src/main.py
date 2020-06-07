@@ -24,6 +24,7 @@ def main():
 	except Exception as error:
 		logger.exception(error)
 	finally:
+		logger.info('Stop playing threads...')
 		for server in Bot.servers.values():
 			server.stop()
 		logger.info('Program end.\n')

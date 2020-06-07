@@ -27,7 +27,7 @@ class Server:
 
 	def playlistLoop(self):
 		server_id = self.ctx.guild.id
-		logger.debug(f'Server: {server_id}. Start playing thread: {threading.current_thread().getName()}')
+		logger.info(f'Server: {server_id}. Start playing thread: {threading.current_thread().getName()}')
 
 		def my_after(error):
 			self.eventNextTrack.set()
@@ -46,7 +46,7 @@ class Server:
 			logger.debug(f'Server: {server_id}. Stop loop')
 			
 			self.eventStartLoop.clear()
-		logger.debug(f'Server: {server_id}. Playing thread died')
+		logger.info(f'Server: {server_id}. Playing thread died')
 		
 
 	def start(self):
@@ -54,7 +54,7 @@ class Server:
 
 	def stop(self):
 		server_id = self.ctx.guild.id
-		logger.debug(f'Server: {server_id}. Stop signal')
+		logger.info(f'Server: {server_id}. Stop signal')
 		self.stopSignal = True
 		self.eventNextTrack.set()
 		while self.playing_thread.is_alive():
