@@ -51,13 +51,14 @@ class Server:
 
 	def start(self):
 		self.eventStartLoop.set()
+		self.voice.resume()
+
 
 	def stop(self):
 		server_id = self.ctx.guild.id
 		logger.info(f'Server: {server_id}. Stop signal')
 		self.stopSignal = True
 		self.eventNextTrack.set()
-		while self.playing_thread.is_alive():
-			self.eventStartLoop.set()
+		self.eventStartLoop.set()
 
 
