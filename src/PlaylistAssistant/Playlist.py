@@ -16,7 +16,7 @@ class Playlist:
 			В случае ошибки возвращает None (см. Playlist.getCurrent)
 		"""
 		self.position += 1
-		if self.position >= self.getLength():
+		if self.position >= len(self.record_list):
 			if self.loop: self.position = 0
 			else: self.position -= 1
 		return self.getCurrent()
@@ -29,7 +29,7 @@ class Playlist:
 		"""
 		self.position -= 1
 		if self.position < 0:
-			if self.loop: self.position = self.getLength() - 1
+			if self.loop: self.position = len(self.record_list) - 1
 			else: self.position += 1
 		return self.getCurrent()
 
@@ -62,11 +62,18 @@ class Playlist:
 			Возвращает успех операции (True/False)
 		"""
 		if not isinstance(pos, int): raise TypeError(f'Expected type \'int\', but \'{pos.__class__.__name__}\' was encountered')
-		if pos < 0: pos += self.getLength()
-		if not 0 <= pos < self.getLength(): return False
+		if pos < 0: pos += len(self.record_list)
+		if not 0 <= pos < len(self.record_list): return False
 		if pos <= self.position: self.position -= 1
 		del self.record_list[pos]
 		return True
+
+
+	def deleteAll(self):
+		""" Удаляет все треки из плейлиста и сбрасывает позицию в 0 """
+		self.record_list = []
+		self.position = 0
+
 
 	def mix(self):
 		""" Перемешивает плейлист и сбрасывает позицию в 0 """
@@ -92,8 +99,8 @@ class Playlist:
 			Возвращает успех операции (True/False)
 		"""
 		if not isinstance(pos, int): raise TypeError(f'Expected type \'int\', but \'{pos.__class__.__name__}\' was encountered')
-		if pos < 0: pos = self.getLength() + pos
-		if not (0 <= pos < self.getLength()): return False
+		if pos < 0: pos = len(self.record_list) + pos
+		if not (0 <= pos < len(self.record_list)): return False
 		return True
 
 
@@ -117,8 +124,8 @@ class Playlist:
 			Возвращает успех операции (True/False)
 		"""
 		if not isinstance(pos, int): raise TypeError(f'Expected type \'int\', but \'{pos.__class__.__name__}\' was encountered')
-		if pos < 0: pos = self.getLength() + pos
-		if not (0 <= pos < self.getLength()): return None
+		if pos < 0: pos = len(self.record_list) + pos
+		if not (0 <= pos < len(self.record_list)): return None
 		return self.record_list[pos]
 		
 
@@ -127,4 +134,4 @@ class Playlist:
 	def setLoop(self, flag: bool): self.loop = bool(flag)
 
 
-	def isEnd(self): return self.position == self.getLength() - 1
+	def isEnd(self): return self.position == len(self.record_list) - 1
