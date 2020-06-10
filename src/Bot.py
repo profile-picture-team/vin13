@@ -1,8 +1,9 @@
-import  discord
+import discord
 from discord.ext import commands
 
-import os
+import os, sys
 import asyncio
+import traceback
 
 import logging
 logger = logging.getLogger(__name__)
@@ -20,6 +21,17 @@ def generate_embed_from_mi(mi):
 	return emb
 Server.generate_embed = generate_embed_from_mi
 
+
+def get_server(ctx):
+	server_id = ctx.guild.id
+	if server_id in servers:
+		return servers[server_id]
+	else:
+		server = Server(ctx=ctx, playlist=Playlist())
+		servers[server_id] = server
+		return server
+
+
 client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
 client.remove_command('help')
 
@@ -36,12 +48,14 @@ async def on_ready():
 		)
 	)
 	logger.info('Bot ready')
+	
 
 @client.event
 async def on_error(event, *args, **kwargs):
-	message = args[0]
-	logger.exception('exception in on_error')
-	await client.send_message(message.channel, ":anger: ОШИБКА!!!")
+	#message = args[0]
+	logger.exception('Exception in on_error')
+	#await client.send_message(message.channel, ":anger: ОШИБКА!!!")
+
 
 @client.event
 async def on_command_error(ctx, error):
@@ -52,11 +66,12 @@ async def on_command_error(ctx, error):
 	elif isinstance(error, commands.MissingRequiredArgument) or isinstance(error, commands.BadArgument):
 		await ctx.send(f'Глаза разуй! Такого аргумента нет! `{ctx.prefix}help {ctx.command}` - для справки')
 	else:
-		logger.exception(error)
+		raise error
 
 
 @client.command()
 async def help(ctx, cmd=''):
+	int('abc')
 	if cmd == '':
 		await ctx.send(help_docs['main-page'])
 	elif cmd == 'not-exist':
@@ -68,9 +83,9 @@ async def help(ctx, cmd=''):
 
 
 @client.command(pass_context = True)
-async def join(ctx, channel_name = '', **kwargs):
+async def join(ctx, channel_name='', **kwargs):
 	from_user = kwargs.get('from_user', True)
-	server_id = ctx.message.guild.id
+	server_id = ctx.guild.id
 	if from_user: logger.debug(f'Server: {server_id}. Joining...')
 	else: logger.debug(f'Server: {server_id}. Auto joining...')
 
@@ -122,13 +137,7 @@ async def join(ctx, channel_name = '', **kwargs):
 		else:
 			channel = channels[0]
 
-	if server_id in servers:
-		server = servers[server_id]
-	else:
-		server = Server()
-		server.ctx = ctx
-		server.playlist = Playlist()
-		servers[server_id] = server
+	server = get_server(ctx)
 
 	if server.voice is None:
 		server.voice = await channel.connect()
@@ -145,7 +154,7 @@ async def join(ctx, channel_name = '', **kwargs):
 		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
 		await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour=0x007D80))
 	else:
-		await server.voice.move_to(channel)
+		server.voice = await channel.connect()
 		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
 		if from_user:
 			await ctx.send(embed = discord.Embed(description=f':white_check_mark: Бот подключился к каналу: {channel}', colour=0x007D80))
@@ -156,23 +165,52 @@ async def join(ctx, channel_name = '', **kwargs):
 @client.command()
 async def leave(ctx):
 	server_id = ctx.message.guild.id
-	if server_id in servers:
-		voice = servers[server_id].voice
-		if voice.is_connected():
-			await voice.disconnect()
-			await ctx.send(embed = discord.Embed(description=':no_entry: Бот отключился', colour=0x007D80))
-		else:
-			await ctx.send('Этим можно просто брать и обмазываться')
+	if not server_id in servers: await ctx.send('Куда лезешь, хуесосина?'); return
+	voice = servers[server_id].voice
+	if voice.is_connected():
+		await voice.disconnect()
+		await ctx.send(embed = discord.Embed(description=':no_entry: Бот отключился', colour=0x007D80))
 	else:
-		await ctx.send('Куда лезешь, хуесосина?')
+		await ctx.send('Этим можно просто брать и обмазываться')
+	
 
 @client.command()
 async def play(ctx, *args):
+	server_id = ctx.guild.id
+	logger.debug(f'Server: {server_id}. Resume play...')
+	if len(args) > 0:
+		await add(ctx, *args)
+	if server_id in servers:
+		if not await join(ctx, from_user=False): return
+		server = servers[server_id]
+		server.start()
+
+
+@client.command()
+async def pause(ctx):
+	server_id = ctx.guild.id
+	logger.debug(f'Server: {server_id}. Pause')
+	if server_id in servers:
+		servers[server_id].voice.pause()
+
+
+@client.command()
+async def skip(ctx, count: int = 1):
 	server_id = ctx.message.guild.id
-	logger.debug(f'Server: {server_id}. Command \'play\'')
-	if not await join(ctx, from_user=False): return
-	server = servers[server_id]
-	server.voice.resume()
+	logger.debug(f'Server: {server_id}. Skip {count}')
+	if server_id in servers:
+		server = servers[server_id]
+		if server.playlist.getLength() == 0: await ctx.send('Скипалка не отросла'); return
+		for i in range(count): server.voice.stop()
+	else:
+		await ctx.send('Может ты плейлист создашь прежде чем скипать?'); return
+
+
+@client.command()
+async def add(ctx, *args):
+	server_id = ctx.guild.id
+	logger.debug(f'Server: {server_id}. Adding...')
+	server = get_server(ctx)
 
 	search_query = ' '.join(args)
 	if search_query == '': return
@@ -182,9 +220,8 @@ async def play(ctx, *args):
 	if mi_list == []: await ctx.send('Ничего не найдено!'); return
 
 	# генерируем и отправляем список треков
-	emb_desc = '0. Отмена'
-	for i, mi in enumerate(mi_list):
-		emb_desc += f'\n{i + 1} :  {mi.artist} - {mi.title}'
+	_list = [f'{i + 1} :  {mi.artist} - {mi.title}\n' for i,mi in enumerate(mi_list)]
+	emb_desc = ''.join(['0. Отмена\n'] + _list)
 	emb = discord.Embed(description=emb_desc, color=0x007D80)
 	emb.set_author(name = 'выберите песню', icon_url = search_img)
 	await ctx.send(embed = emb)
@@ -221,59 +258,30 @@ async def play(ctx, *args):
 	if server.playlist.add(mi): await ctx.send(f'Добавил: {mi.artist} - {mi.title}')
 	else: await ctx.send('Ошибка добавления!'); return
 
-	server.start()
-
 
 @client.command()
-async def pause(ctx):
-	server_id = ctx.message.guild.id
-	logger.debug(f'Server: {server_id}. Command \'pause\'')
-	if server_id in servers:
-		servers[server_id].voice.pause()
-
-
-@client.command()
-async def skip(ctx):
-	server_id = ctx.message.guild.id
-	logger.debug(f'Server: {server_id}. Command \'skip\'')
-	if server_id in servers:
-		server = servers[server_id]
-		if server.playlist.getLength() == 0: await ctx.send('Скипалка не отросла'); return
-		server.voice.stop()
-	else:
-		await ctx.send('Может ты плейлист создашь прежде чем скипать?'); return
-
-
-@client.command()
-async def playing(ctx):
-	server_id = ctx.message.guild.id
-	if not server_id in servers: await ctx.send('А у вас плейлист не создан'); return
-	server = servers[server_id]
-	if server.playlist.getLength() > 0:
-		await ctx.send(embed = generate_embed_from_mi(server.playlist.getCurrent()))
-	else:
-		await ctx.send('Если долго всматриваться в пустоту, то ты увидишь этот плейлист')
-
-
-@client.command()
-async def remove(ctx, pos: int):
-	server_id = ctx.message.guild.id
-	logger.debug(f'Server: {server_id}. Command \'remove\'')
+async def remove(ctx, arg):
+	server_id = ctx.guild.id
+	logger.debug(f'Server: {server_id}. Removing...')
 	if not server_id in servers:
-		logger.debug(f'Server: {server_id}. No server')
+		logger.debug(f'Server: {server_id}. Remove error: No server')
 		await ctx.send('Туз не на месте')
 		return
 	server = servers[server_id]
-	if server.playlist.getLength() == 0:
-		logger.debug(f'Server: {server_id}. Empty playlist')
-		await ctx.send('Ты говоришь, что в казино в запечатанных колодах карты разложены по-другому?!')
-		return
 
-	mi = server.playlist.getByPosition(pos)
-	if mi is None:
+	if arg == 'all':
+		server.playlist.deleteAll()
+		server.voice.stop()
+		await ctx.send(f'Удалил весь плейлист :fire:')
+		return
+	pos = arg
+
+	if not 0 <= pos < server.playlist.getLength():
+		logger.debug(f'Server: {server_id}. Remove error: Invalid position: {pos}')
 		await ctx.send('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..')
 		return
-
+	
+	mi = server.playlist.getByPosition(pos)
 	old_pos = server.playlist.getPosition()
 	if server.playlist.deleteByPosition(pos):
 		await ctx.send(f'Удалил: {mi.artist} - {mi.title} :fire:')
@@ -283,22 +291,45 @@ async def remove(ctx, pos: int):
 
 
 @client.command()
-async def queue(ctx):
+async def playing(ctx):
 	server_id = ctx.message.guild.id
+	if not server_id in servers: await ctx.send('А у вас плейлист не создан'); return
+	server = servers[server_id]
+	mi = server.playlist.getCurrent()
+	if mi is None:
+		await ctx.send('Если долго всматриваться в пустоту, то ты увидишь этот плейлист')
+	else:
+		await ctx.send(embed = generate_embed_from_mi(mi))
+
+
+@client.command()
+async def queue(ctx):
+	server_id = ctx.guild.id
 	if not server_id in servers: await ctx.send('Плейлист не создан'); return
 	server = servers[server_id]
 
 	if server.playlist.getLength() == 0: await ctx.send('Плейлист пуст'); return
 
 	mi_list = server.playlist.getAll()
-	to_send = str()
-	curr_id = server.playlist.getPosition()
-	for i, mi in enumerate(mi_list):
-		if i == curr_id:
-			to_send += f'**{i} :  {mi.artist} - {mi.title}**\n'
-		else:
-			to_send += f'{i} :  {mi.artist} - {mi.title}\n'
+	_list = [f'{i} :  {mi.artist} - {mi.title}\n' for i,mi in enumerate(mi_list)]
+	pos = server.playlist.getPosition()
+	mi = mi_list[pos]
+	_list[pos] = f'**{pos} :  {mi.artist} - {mi.title}**\n'
+
+	to_send = ''.join(_list)
 
 	emb = discord.Embed(title='', description=to_send, color=0x007D80)
 	emb.set_author(name = 'текущий плейлист', icon_url = pl_img)
 	await ctx.send(embed = emb)
+
+
+@client.command()
+async def services(ctx, service_name=''):
+	await ctx.send('Пока недоступно :clown:')
+	pass
+
+
+@client.command()
+async def about(ctx):
+	await ctx.send('Пока недоступно :clown:')
+	pass	
