@@ -25,8 +25,9 @@ def main():
 		logger.exception(error)
 	finally:
 		logger.info('Stop playing threads...')
-		for server in Bot.servers.values():
-			server.stop()
+		servers = Bot.servers.values()
+		for server in servers: server.stop()
+		for server in servers: server.playing_thread.join()
 		logger.info('Program end.\n')
 
 if __name__ == '__main__': main()
