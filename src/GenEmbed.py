@@ -1,7 +1,6 @@
-import enum
 import discord
 
-class EmbedTypes(enum.Enum):
+class EmbedTypes():
 	info    = (0x007D80, "{text}")
 	ok      = (0x006b12, ":white_check_mark: {text}")
 	warning = (0xadad00, ":warning: {text}")

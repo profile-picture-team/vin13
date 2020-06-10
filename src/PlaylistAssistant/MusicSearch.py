@@ -8,6 +8,8 @@ from MusicInfo import MusicInfo
 
 default_image = 'https://img.icons8.com/pastel-glyph/FFFFFF/music-record.png'
 
+session = requests.Session()
+
 def musicSearch(service, q, count = 0):
 	"""
 		Вызывает функцию поиска для соответствующего сервиса
@@ -31,17 +33,17 @@ def musicSearchVK(q, count = 0):
 		logger.debug(f'Search request: {q}')
 		url = 'https://vk.music7s.cc/api/search.php'
 		params = {'search' : q, 'time' : time.time()}
-		response = requests.get(url, params=params, timeout=10)
+		response = session.get(url, params=params, timeout=10)
 		response.raise_for_status()
 		data = response.json()
-	except requests.Timeout:
-		logger.error(f'Get: {response.url} - Timed out.')
+	except requests.Timeout as err:
+		logger.error(f'Get: {err.request.url} - Timed out.')
 	except requests.HTTPError as err:
-		logger.error(f'Get: {response.url} - Bad answer: {err.response.status_code}.')
-	except requests.ConnectionError:
-		logger.error(f'Get: {response.url} - Connection error')
-	except requests.RequestException:
-		logger.exception(f'Get: {response.url} - Unforeseen exception')
+		logger.error(f'Get: {err.request.url} - Bad answer: {err.request.status_code}.')
+	except requests.ConnectionError as err:
+		logger.error(f'Get: {err.request.url} - Connection error')
+	except requests.RequestException as err:
+		logger.exception(f'Get: {err.request.url} - Unforeseen exception')
 	else:
 		if data['error']:
 			if data['error_message'][:34] != 'Не удалось получить список музыки.':
