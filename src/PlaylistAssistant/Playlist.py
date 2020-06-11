@@ -10,10 +10,10 @@ class Playlist:
 		self.loop        = bool(loop)
 
 
-	def next(self):
+	def next(self) -> MusicInfo:
 		"""
-			Перематывает плейлист вперед и возвращает Playlist.getCurrent()
-			В случае ошибки возвращает None (см. Playlist.getCurrent)
+			Перематывает плейлист вперед
+			Возвращает Playlist.getCurrent()
 		"""
 		self.position += 1
 		if self.position >= len(self.record_list):
@@ -22,7 +22,7 @@ class Playlist:
 		return self.getCurrent()
 
 
-	def prev(self):
+	def prev(self) -> MusicInfo:
 		"""
 			Перематывает плейлист назад 
 			Возвращает Playlist.getCurrent()
@@ -34,7 +34,7 @@ class Playlist:
 		return self.getCurrent()
 
 
-	def add(self, mi):
+	def add(self, mi: MusicInfo) -> bool:
 		"""
 			Если mi нет в списке, то добавляет его в конец
 			Возвращает успех операции (True/False)
@@ -46,7 +46,7 @@ class Playlist:
 		else: return False
 
 
-	def delete(self, mi):
+	def delete(self, mi: MusicInfo) -> bool:
 		"""
 			Удаляет mi из списка
 			Возвращает успех операции (True/False)
@@ -55,7 +55,7 @@ class Playlist:
 		return self.deleteByPosition(self.record_list.index(mi))
 
 
-	def deleteByPosition(self, pos: int):
+	def deleteByPosition(self, pos: int) -> bool:
 		"""
 			Удаляет элемент списка по индексу
 			Бросает TypeError, если isinstance(pos, int) == False
@@ -69,29 +69,29 @@ class Playlist:
 		return True
 
 
-	def deleteAll(self):
+	def deleteAll(self) -> None:
 		""" Удаляет все треки из плейлиста и сбрасывает позицию в 0 """
 		self.record_list = []
 		self.position = 0
 
 
-	def mix(self):
+	def mix(self) -> None:
 		""" Перемешивает плейлист и сбрасывает позицию в 0 """
 		random.shuffle(self.record_list)
 		self.position = 0
 
 
-	def getLength(self):
-		"""	Возвращает длину плейлиста """
+	def getLength(self) -> int:
+		""" Возвращает длину плейлиста """
 		return len(self.record_list)
 
 
-	def getPosition(self):
-		"""	Возвращает текущую позицию в плейлисте """
+	def getPosition(self) -> int:
+		""" Возвращает текущую позицию в плейлисте """
 		return self.position
 
 
-	def setPosition(self, pos: int):
+	def setPosition(self, pos: int) -> bool:
 		"""
 			Устанавливает текущую позицию в плейлисте
 			Можно использовать отрицательные индексы
@@ -104,19 +104,19 @@ class Playlist:
 		return True
 
 
-	def getAll(self): return self.record_list
+	def getAll(self) -> list: return self.record_list
 
 
-	def getCurrent(self):
+	def getCurrent(self) -> MusicInfo:
 		"""
 			Возвращает MusicInfo текущего трека
 			Если плейлист пуст, то возвращает None
 		"""
-		if self.getLength == 0: return None
+		if len(self.record_list) == 0: return None
 		return self.record_list[self.position]
 		
 
-	def getByPosition(self, pos: int):
+	def getByPosition(self, pos: int) -> MusicInfo:
 		"""
 			Возвращает трек по индексу
 			Можно использовать отрицательные индексы
@@ -129,9 +129,10 @@ class Playlist:
 		return self.record_list[pos]
 		
 
-	def isLoop(self): return self.loop
-
-	def setLoop(self, flag: bool): self.loop = bool(flag)
+	def isLoop(self) -> bool: return self.loop
 
 
-	def isEnd(self): return self.position == len(self.record_list) - 1
+	def setLoop(self, flag: bool) -> None: self.loop = bool(flag)
+
+
+	def isEnd(self) -> bool: return self.position == len(self.record_list) - 1
