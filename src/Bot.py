@@ -9,21 +9,14 @@ logger = logging.getLogger(__name__)
 
 from PlaylistAssistant import *
 from Server import Server
-from GenEmbed import (
-	EmbedTypes,
-	get_embed,
-	get_info_embed,
-	get_ok_embed,
-	get_warning_embed,
-	get_error_embed
-)
+from GenEmbed import MsgEmbed
 
 pl_img     = 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png'
 search_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/search--v2.png'
 list_img   = 'https://img.icons8.com/windows/96/FFFFFF/untested.png'
 
 def get_mi_embed(mi):
-	emb = discord.Embed(colour=0x007D80)
+	emb = MsgEmbed.info('')
 	emb.set_author(name = f'{mi.artist} - {mi.title} [ {mi.time} сек ]', icon_url = mi.image_url)
 	return emb
 Server.generate_embed = get_mi_embed
@@ -37,7 +30,7 @@ def get_server(ctx):
 		server = Server(ctx=ctx, playlist=Playlist())
 		servers[server_id] = server
 		return server
-
+		
 
 client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
 client.remove_command('help')
@@ -59,7 +52,7 @@ async def on_ready():
 @client.event
 async def on_error(event, ctx, *args, **kwargs):
 	logger.exception(f'Exception in on_error. Event: {event}')
-	await ctx.send(embed=get_error_embed('!!! ОШИБКА !!!'))
+	await ctx.send(embed=MsgEmbed.error('!!! ОШИБКА !!!'))
 
 @client.event
 async def on_command(ctx):
@@ -69,11 +62,11 @@ async def on_command(ctx):
 @client.event
 async def on_command_error(ctx, error):
 	if isinstance(error, commands.CheckFailure):
-		await ctx.send(embed=get_error_embed('Не дорос ещё!'))
+		await ctx.send(embed=MsgEmbed.error('Не дорос ещё!'))
 	elif isinstance(error, commands.CommandNotFound):
-		await ctx.send(embed=get_error_embed(f'Такой команды нет! `{ctx.prefix}help` - для справки'))
+		await ctx.send(embed=MsgEmbed.error(f'Такой команды нет! `{ctx.prefix}help` - для справки'))
 	elif isinstance(error, commands.MissingRequiredArgument) or isinstance(error, commands.BadArgument):
-		await ctx.send(embed=get_error_embed(f'Глаза разуй! Такого аргумента нет! `{ctx.prefix}help {ctx.command}` - для справки'))
+		await ctx.send(embed=MsgEmbed.error(f'Глаза разуй! Такого аргумента нет! `{ctx.prefix}help {ctx.command}` - для справки'))
 	else:
 		raise error
 
@@ -103,18 +96,18 @@ async def join(ctx, channel_name='', **kwargs):
 			channel = ctx.author.voice.channel
 		except AttributeError:
 			logger.debug(f'Server: {server_id}. Join error: User is not connected')
-			await ctx.send(embed=get_error_embed('Присоединись к каналу, мудак'))
+			await ctx.send(embed=MsgEmbed.error('Присоединись к каналу, мудак'))
 			return False
 	else:
 		channels = list(filter(lambda x: x.name==channel_name, ctx.guild.voice_channels))
 		if len(channels) == 0:
 			logger.debug(f'Server: {server_id}. Join error: Channel not found')
-			await ctx.send(embed=get_error_embed('Ты инвалид, а название канала неправильное'))
+			await ctx.send(embed=MsgEmbed.error('Ты инвалид, а название канала неправильное'))
 			return False
 		elif len(channels) > 1:
 			# даём пользователю выбрать канал по номеру в списке каналов
 			_list = [f'{i + 1} :  {x} ({x.position + 1}-й)\n' for i,x in enumerate(channels)]
-			emb = get_info_embed(''.join(['0. Отмена\n'] + _list))
+			emb = MsgEmbed.info(''.join(['0. Отмена\n'] + _list))
 			emb.set_author(name = 'выберите канал', icon_url = list_img)
 			await ctx.send(embed = emb)
 			
@@ -131,15 +124,15 @@ async def join(ctx, channel_name='', **kwargs):
 
 				if index == 0:
 					logger.debug(f'Server: {server_id}. Joining canceled')
-					await ctx.send(embed=get_warning_embed('Подключение отменено'))
+					await ctx.send(embed=MsgEmbed.warning('Подключение отменено'))
 					return False
 				if index > len(channels):
-					await ctx.send(embed=get_warning_embed('Пользователь дурак. Подключение отменено'))
+					await ctx.send(embed=MsgEmbed.warning('Пользователь дурак. Подключение отменено'))
 					return False
 				channel = channels[index - 1]
 			except asyncio.exceptions.TimeoutError:
 				logger.debug(f'Server: {server_id}. Join error: User answer timeout')
-				await ctx.send(embed=get_warning_embed('Подключение отменено'))
+				await ctx.send(embed=MsgEmbed.warning('Подключение отменено'))
 				return False
 		else:
 			channel = channels[0]
@@ -150,21 +143,21 @@ async def join(ctx, channel_name='', **kwargs):
 		server.voice = await channel.connect()
 		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
 		if from_user:
-			await ctx.send(embed=get_ok_embed(f'Бот подключился к каналу: {channel}'))
+			await ctx.send(embed=MsgEmbed.ok(f'Бот подключился к каналу: {channel}'))
 	elif server.voice.is_connected():
 		if server.voice.channel == channel:
 			logger.debug(f'Server: {server_id}. Join error: Already joined')
 			if from_user:
-				await ctx.send(embed=get_warning_embed(f'Бот уже подключен к каналу: {channel}'))
+				await ctx.send(embed=MsgEmbed.warning(f'Бот уже подключен к каналу: {channel}'))
 			return True
 		await server.voice.move_to(channel)
 		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
-		await ctx.send(embed=get_ok_embed(f'Бот подключился к каналу: {channel}'))
+		await ctx.send(embed=MsgEmbed.ok(f'Бот подключился к каналу: {channel}'))
 	else:
 		server.voice = await channel.connect()
 		logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
 		if from_user:
-			await ctx.send(embed=get_ok_embed(f'Бот подключился к каналу: {channel}'))
+			await ctx.send(embed=MsgEmbed.ok(f'Бот подключился к каналу: {channel}'))
 
 	return True
 
@@ -174,9 +167,9 @@ async def leave(ctx):
 	voice = get_server(ctx).voice
 	if voice and voice.is_connected():
 		await voice.disconnect()
-		await ctx.send(embed=get_warning_embed('Бот отключился'))
+		await ctx.send(embed=MsgEmbed.warning('Бот отключился'))
 	else:
-		await ctx.send(embed=get_error_embed('Этим можно просто брать и обмазываться'))
+		await ctx.send(embed=MsgEmbed.error('Этим можно просто брать и обмазываться'))
 	
 
 @client.command()
@@ -200,11 +193,11 @@ async def skip(ctx, count: int = 1):
 	if server_id in servers:
 		server = servers[server_id]
 		if server.playlist.getLength() == 0:
-			await ctx.send(embed=get_error_embed('Скипалка не отросла'));
+			await ctx.send(embed=MsgEmbed.error('Скипалка не отросла'));
 			return
 		for i in range(count): server.voice.stop()
 	else:
-		await ctx.send(embed=get_error_embed('Может ты плейлист создашь прежде чем скипать?'))
+		await ctx.send(embed=MsgEmbed.error('Может ты плейлист создашь прежде чем скипать?'))
 
 
 @client.command()
@@ -216,12 +209,12 @@ async def add(ctx, *args):
 	if search_query == '': return
 
 	mi_list = musicSearch('vk', search_query, 5)
-	if mi_list is None: await ctx.send(embed=get_error_embed('Ошибка поиска!')); return
-	if mi_list == []: await ctx.send(embed=get_warning_embed('Ничего не найдено!')); return
+	if mi_list is None: await ctx.send(embed=MsgEmbed.error('Ошибка поиска!')); return
+	if mi_list == []: await ctx.send(embed=MsgEmbed.warning('Ничего не найдено!')); return
 
 	# генерируем и отправляем список треков
 	_list = [f'{i + 1} :  {mi.artist} - {mi.title}\n' for i,mi in enumerate(mi_list)]
-	emb = get_info_embed(''.join(['0. Отмена\n'] + _list))
+	emb = MsgEmbed.info(''.join(['0. Отмена\n'] + _list))
 	emb.set_author(name = 'выберите песню', icon_url = search_img)
 	await ctx.send(embed = emb)
 
@@ -243,19 +236,19 @@ async def add(ctx, *args):
 				index = int(text)
 				if index == 0:
 					logger.debug(f'Server: {server_id}. Canceled')
-					await ctx.send(embed=get_warning_embed('Отменено'))
+					await ctx.send(embed=MsgEmbed.warning('Отменено'))
 					return
 				mi = mi_list[index - 1]
 				logger.debug(f'Server: {server_id}. Received message from author: {ctx.author}')
 				break
-			except IndexError: await ctx.send(embed=get_error_embed('Ты кто такой, сука, чтоб это делать?'))
+			except IndexError: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?'))
 	except asyncio.exceptions.TimeoutError:
-		await ctx.send(embed=get_warning_embed('Кто не успел - тот опоздал'))
+		await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
 		return
 
 	# пытаемся добавить трек в плейлист
-	if server.playlist.add(mi): await ctx.send(embed=get_info_embed(f'Добавил: {mi.artist} - {mi.title}'))
-	else: await ctx.send(embed=get_error_embed('Ошибка добавления!')); return
+	if server.playlist.add(mi): await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
+	else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!')); return
 
 
 @client.command()
@@ -263,14 +256,14 @@ async def remove(ctx, arg):
 	server_id = ctx.guild.id
 	if not server_id in servers:
 		logger.debug(f'Server: {server_id}. Remove error: No server')
-		await ctx.send(embed=get_warning_embed('Туз не на месте'))
+		await ctx.send(embed=MsgEmbed.warning('Туз не на месте'))
 		return
 	server = servers[server_id]
 
 	if arg == 'all':
 		server.playlist.deleteAll()
 		server.voice.stop()
-		await ctx.send(embed=get_info_embed('Удалил весь плейлист :fire:'))
+		await ctx.send(embed=MsgEmbed.info('Удалил весь плейлист :fire:'))
 		return
 	if not arg.isdigit():
 		raise commands.MissingRequiredArgument()
@@ -278,26 +271,26 @@ async def remove(ctx, arg):
 
 	if not 0 <= pos < server.playlist.getLength():
 		logger.debug(f'Server: {server_id}. Remove error: Invalid position: {pos}')
-		await ctx.send(embed=get_error_embed('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..'))
+		await ctx.send(embed=MsgEmbed.error('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..'))
 		return
 	
 	mi = server.playlist.getByPosition(pos)
 	old_pos = server.playlist.getPosition()
 	if server.playlist.deleteByPosition(pos):
-		await ctx.send(embed=get_info_embed(f'Удалил: {mi.artist} - {mi.title} :fire:'))
+		await ctx.send(embed=MsgEmbed.info(f'Удалил: {mi.artist} - {mi.title} :fire:'))
 		if old_pos == pos and server.voice is not None: server.voice.stop()
 	else:
-		await ctx.send(embed=get_error_embed('Ошибка удаления'))
+		await ctx.send(embed=MsgEmbed.error('Ошибка удаления'))
 
 
 @client.command()
 async def playing(ctx):
 	server_id = ctx.message.guild.id
-	if not server_id in servers: await ctx.send(embed=get_error_embed('А у вас плейлист не создан')); return
+	if not server_id in servers: await ctx.send(embed=MsgEmbed.error('А у вас плейлист не создан')); return
 	server = servers[server_id]
 	mi = server.playlist.getCurrent()
 	if mi is None:
-		await ctx.send(embed=get_info_embed('Если долго всматриваться в пустоту, то ты увидишь этот плейлист'))
+		await ctx.send(embed=MsgEmbed.info('Если долго всматриваться в пустоту, то ты увидишь этот плейлист'))
 	else:
 		await ctx.send(embed=get_mi_embed(mi))
 
@@ -307,14 +300,14 @@ async def queue(ctx):
 	server = get_server(ctx)
 
 	if server.playlist.getLength() == 0:
-		emb = get_info_embed('Плейлист пуст')
+		emb = MsgEmbed.info('Плейлист пуст')
 	else:
 		mi_list = server.playlist.getAll()
 		_list = [f'{i} :  {mi.artist} - {mi.title}\n' for i,mi in enumerate(mi_list)]
 		pos = server.playlist.getPosition()
 		mi = mi_list[pos]
 		_list[pos] = f'**{pos} :  {mi.artist} - {mi.title}**\n'
-		emb = get_info_embed(''.join(_list))
+		emb = MsgEmbed.info(''.join(_list))
 
 	emb.set_author(name = 'текущий плейлист', icon_url = pl_img)
 	await ctx.send(embed = emb)
@@ -330,5 +323,5 @@ async def services(ctx, service_name=''):
 
 @client.command()
 async def about(ctx):
-	await ctx.send(embed=get_warning_embed('Пока недоступно :clown:'))
+	await ctx.send(embed=MsgEmbed.warning('Пока недоступно :clown:'))
 	pass	
