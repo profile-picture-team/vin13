@@ -13,17 +13,25 @@ class MusicInfo:
 		self.image_url = image_url # иконка трека
 		self.filepath  = filepath  # полный путь до файла
 
-	def isCorrect(mi):
-		"""
-			Проверяет данные в обекте типа MusicInfo
-			Если тип не соответствует или данные не корректны,
-			то возвращает False
-		"""
-		if not isinstance(mi, MusicInfo) or \
-		   not isinstance(mi.title, str) or \
-		   not isinstance(mi.artist, str) or \
-		   not(isinstance(mi.time, int) and mi.time >= 0) or \
-		   not isinstance(mi.image_url, str) or \
-		   not isinstance(mi.filepath, str) \
-		: return False
-		return True
+
+	def isCorrect(mi) -> bool:
+		""" Проверяет данные на корректность в обекте типа MusicInfo """
+		return \
+			isinstance(mi, MusicInfo) and \
+			isinstance(mi.title, str) and \
+			isinstance(mi.artist, str) and \
+			isinstance(mi.time, int) and \
+			isinstance(mi.image_url, str) and \
+			isinstance(mi.filepath, str) and \
+			mi.time >= 0
+
+
+	def __eq__(self, other):
+		return \
+			isinstance(other, MusicInfo) and \
+			self.filepath == other.filepath
+
+ 
+	def __ne__(self, other):
+		return not self.__eq__(other)
+		
