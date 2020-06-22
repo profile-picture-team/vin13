@@ -11,9 +11,34 @@ from PlaylistAssistant import *
 from Server import Server
 from GenEmbed import MsgEmbed
 
-pl_img     = 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png'
-search_img = 'https://img.icons8.com/pastel-glyph/FFFFFF/search--v2.png'
-list_img   = 'https://img.icons8.com/windows/96/FFFFFF/untested.png'
+
+
+icons = {
+	'playlist' : 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png',
+	'search'   : 'https://img.icons8.com/pastel-glyph/FFFFFF/search--v2.png',
+	'list'     : 'https://img.icons8.com/windows/96/FFFFFF/untested.png'
+}
+
+servers = dict() # id : Server.Server
+
+client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
+client.remove_command('help')
+
+
+
+def get_server(ctx) -> Server:
+	"""
+		Возвращает Server из servers
+		Если нет экземпляра, то создаёт его
+	"""
+	server_id = ctx.guild.id
+	if server_id in servers:
+		return servers[server_id]
+	else:
+		server = Server(ctx=ctx, playlist=Playlist(loop=True))
+		servers[server_id] = server
+		return server
+		
 
 def get_mi_embed(mi):
 	emb = MsgEmbed.info('')
@@ -22,20 +47,6 @@ def get_mi_embed(mi):
 Server.generate_embed = get_mi_embed
 
 
-def get_server(ctx):
-	server_id = ctx.guild.id
-	if server_id in servers:
-		return servers[server_id]
-	else:
-		server = Server(ctx=ctx, playlist=Playlist())
-		servers[server_id] = server
-		return server
-		
-
-client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
-client.remove_command('help')
-
-servers = dict() # id : Server.Server
 
 
 @client.event
@@ -49,15 +60,19 @@ async def on_ready():
 	)
 	logger.info('Bot ready')
 
+
 @client.event
 async def on_error(event, ctx, *args, **kwargs):
 	logger.exception(f'Exception in on_error. Event: {event}')
 	await ctx.send(embed=MsgEmbed.error('!!! ОШИБКА !!!'))
 
 @client.event
+
 async def on_command(ctx):
 	server_id = ctx.guild.id
 	logger.debug(f'Server: {server_id}. Command: {ctx.command} {ctx.args[1:]}')
+	
+
 
 @client.event
 async def on_command_error(ctx, error):
@@ -85,12 +100,12 @@ async def _help(ctx, cmd=''):
 
 
 @client.command()
-async def join(ctx, channel_name='', **kwargs):
-	from_user = kwargs.get('from_user', True)
+async def join(ctx, channel_name = '', *, from_user = True):
 	server_id = ctx.guild.id
 	if from_user: logger.debug(f'Server: {server_id}. Joining...')
 	else: logger.debug(f'Server: {server_id}. Auto joining...')
 
+	# получаем канал для подключения (или вылетаем с ошибкой)
 	if channel_name == '':
 		try:
 			channel = ctx.author.voice.channel
@@ -102,23 +117,23 @@ async def join(ctx, channel_name='', **kwargs):
 		channels = list(filter(lambda x: x.name==channel_name, ctx.guild.voice_channels))
 		if len(channels) == 0:
 			logger.debug(f'Server: {server_id}. Join error: Channel not found')
-			await ctx.send(embed=MsgEmbed.error('Ты инвалид, а название канала неправильное'))
+			await ctx.send(embed=MsgEmbed.error('Ты инвалид? Название канала неправильное'))
 			return False
 		elif len(channels) > 1:
-			# даём пользователю выбрать канал по номеру в списке каналов
+			# составляем список каналов и отправляем его
 			_list = [f'{i + 1} :  {x} ({x.position + 1}-й)\n' for i,x in enumerate(channels)]
 			emb = MsgEmbed.info(''.join(['0. Отмена\n'] + _list))
-			emb.set_author(name = 'выберите канал', icon_url = list_img)
+			emb.set_author(name = 'выберите канал', icon_url = icons['list'])
 			await ctx.send(embed = emb)
 			
 			def get_message_check(author):
 				def is_message_correct(message):
-					if message.author != author:
-						return False
-					return message.content.isdigit()
+					return message.author == author and message.content.isdigit()
 				return is_message_correct
 
+			# обрабатываем ответ пользователя
 			try:
+				# ждем пока автор ответит числом
 				msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
 				index = int(msg.content)
 
@@ -132,12 +147,13 @@ async def join(ctx, channel_name='', **kwargs):
 				channel = channels[index - 1]
 			except asyncio.exceptions.TimeoutError:
 				logger.debug(f'Server: {server_id}. Join error: User answer timeout')
-				await ctx.send(embed=MsgEmbed.warning('Подключение отменено'))
+				await ctx.send(embed=MsgEmbed.warning('Время вышло. Подключение отменено'))
 				return False
 		else:
 			channel = channels[0]
 
 	server = get_server(ctx)
+
 
 	if server.voice is None:
 		server.voice = await channel.connect()
@@ -174,7 +190,9 @@ async def leave(ctx):
 
 @client.command()
 async def play(ctx, *args):
-	if not await join(ctx, from_user=False): return
+	if not await join(ctx, from_user=False):
+		await ctx.send(embed=MsgEmbed.error('Задача успешно провалена'))
+		return
 	if len(args) > 0:
 		await add(ctx, *args)
 	get_server(ctx).start()
@@ -195,7 +213,9 @@ async def skip(ctx, count: int = 1):
 		if server.playlist.getLength() == 0:
 			await ctx.send(embed=MsgEmbed.error('Скипалка не отросла'));
 			return
-		for i in range(count): server.voice.stop()
+		for i in range(count - 1):
+			server.playlist.next()
+		server.voice.stop()
 	else:
 		await ctx.send(embed=MsgEmbed.error('Может ты плейлист создашь прежде чем скипать?'))
 
@@ -215,16 +235,14 @@ async def add(ctx, *args):
 	# генерируем и отправляем список треков
 	_list = [f'{i + 1} :  {mi.artist} - {mi.title}\n' for i,mi in enumerate(mi_list)]
 	emb = MsgEmbed.info(''.join(['0. Отмена\n'] + _list))
-	emb.set_author(name = 'выберите песню', icon_url = search_img)
+	emb.set_author(name = 'выберите песню', icon_url = icons['search'])
 	await ctx.send(embed = emb)
 
 	# ждём от пользователя индекс трека
 	try:
 		def get_message_check(author):
 			def is_message_correct(message):
-				if message.author != author:
-					return False
-				return message.content.isdigit()
+				return message.author == author and message.content.isdigit()
 			return is_message_correct
 
 		while True:
@@ -309,19 +327,11 @@ async def queue(ctx):
 		_list[pos] = f'**{pos} :  {mi.artist} - {mi.title}**\n'
 		emb = MsgEmbed.info(''.join(_list))
 
-	emb.set_author(name = 'текущий плейлист', icon_url = pl_img)
+	emb.set_author(name = 'текущий плейлист', icon_url = icons['playlist'])
 	await ctx.send(embed = emb)
-
-
-"""
-@client.command()
-async def services(ctx, service_name=''):
-	await ctx.send(embed=get_warning_embed('Пока недоступно :clown:'))
-	pass
-"""
 
 
 @client.command()
 async def about(ctx):
-	await ctx.send(embed=MsgEmbed.warning('Пока недоступно :clown:'))
+	await ctx.send(embed=MsgEmbed.info(about_docs))
 	pass	

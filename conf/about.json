@@ -1,13 +1,11 @@
 {
-    "bot-name" : "vin13",
-    "bot-description" : [ "{bot_name} — музыкальный славянский бот, сделанный славянами для славян" ],
-    "main-description" : [
-        "Рекомендуем ознакомится со справкой: {prx}help",
-        "Для получения информации о поддерживаемых сервисах : {prx}services",
+    "description" : [
+        "{botname} - музыкальный славянский бот сделанный славянами для славян",
+        "",
+        "Рекомендуем ознакомится со справкой: {prx}help"
     ],
-    "footer" : {
-        "version" : "0.8.0 (alpha)",
-        "authors" : [ "Ivan Osinin", "Dmitry Haiduk" ],
-        "github"  : "https://github.com/profile-picture-team/vin13"
-    }
+    "botname" : "vin13",
+    "version" : "0.9.0 (beta)",
+    "authors" : [ "Ivan Osinin", "Dmitry Haiduk" ],
+    "github"  : "https://github.com/profile-picture-team/vin13"
 }

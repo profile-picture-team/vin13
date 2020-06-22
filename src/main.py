@@ -12,12 +12,15 @@ import os
 
 import Bot
 import HelpLoader
+import AboutLoader
 
 
 def main():
 	try:
 		logger.info('Program start')
-		Bot.help_docs = HelpLoader.load_help_docs('conf/help.json', os.getenv('PREFIX'))
+		prefix = os.getenv('PREFIX')
+		Bot.help_docs = HelpLoader.load_help_docs('conf/help.json', prefix)
+		Bot.about_docs = AboutLoader.load_about_docs('conf/about.json', prefix)
 		Bot.client.run(os.getenv('BOT_TOKEN'))
 	except KeyboardInterrupt:
 		logger.warning('Interrupted')
