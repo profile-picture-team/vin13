@@ -17,6 +17,7 @@ import AboutLoader
 
 def main():
 	try:
+		logger.info('####################')
 		logger.info('Program start')
 		prefix = os.getenv('PREFIX')
 		Bot.help_docs = HelpLoader.load_help_docs('conf/help.json', prefix)
@@ -31,6 +32,6 @@ def main():
 		servers = Bot.servers.values()
 		for server in servers: server.stop()
 		for server in servers: server.playing_thread.join()
-		logger.info('Program end.\n')
+		logger.info('Program end.') # иногда программа резко закрывается и тогда в логах нет отступа
 
 if __name__ == '__main__': main()
