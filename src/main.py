@@ -15,7 +15,7 @@ import HelpLoader
 import AboutLoader
 
 def main():
-	try:
+	try:	
 		logger.info('####################') #ыыы
 		logger.info('Program start')
 		prefix = os.getenv('PREFIX')
