@@ -11,7 +11,7 @@ from PlaylistAssistant import *
 from Server import Server
 from GenEmbed import MsgEmbed
 
-############################################
+#region var
 
 icons = {
 	'playlist' : 'https://img.icons8.com/pastel-glyph/FFFFFF/playlist.png',
@@ -24,7 +24,9 @@ servers = dict() # id : Server.Server
 client = commands.Bot(command_prefix=os.getenv('PREFIX'), case_insensitive=True)
 client.remove_command('help')
 
-############################################
+#endregion
+
+#region get_server/mi_embed, join_to_channel
 
 def get_server(ctx) -> Server:
 	"""
@@ -71,6 +73,7 @@ async def join_to_channel(ctx, channel):
 			logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
 		else:
 			# Я не знаю как подключить уже существующий войс, если это вообще возможно -_-
+		    # ... (читаю твои коменты и мне становится плохо)
 			server.voice = await channel.connect()
 			logger.debug(f'Server: {server_id}. Joined \'{channel}:{channel.position}\'')
 	except:
@@ -78,8 +81,9 @@ async def join_to_channel(ctx, channel):
 		return 2
 	return 0
 
+#endregion
 
-############################################
+#region @client.events
 
 @client.event
 async def on_ready():
@@ -91,7 +95,6 @@ async def on_ready():
 		)
 	)
 	logger.info('Bot ready')
-
 
 @client.event
 async def on_error(event, ctx, *args, **kwargs):
@@ -115,7 +118,9 @@ async def on_command_error(ctx, error):
 	else:
 		raise error
 
-############################################
+#endregion
+
+#region @client.command
 
 @client.command(name='help')
 async def _help(ctx, cmd=''):
@@ -327,3 +332,5 @@ async def queue(ctx):
 async def about(ctx):
 	await ctx.send(embed=MsgEmbed.info(about_docs))
 	pass	
+
+#endregion

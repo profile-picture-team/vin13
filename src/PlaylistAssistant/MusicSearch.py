@@ -20,7 +20,7 @@ def musicSearch(service, q, count = 0):
 	if service.lower() == 'vk': return musicSearchVK(q, count)
 	return None
 
-
+# https://vk.music7s.cc/api/get_playlist.php?id=
 def musicSearchVK(q, count = 0):
 	"""
 		Отправляет поисковый запрос на vk.music7c.cc

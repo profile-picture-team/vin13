@@ -7,7 +7,7 @@ import discord
 logger = logging.getLogger(__name__)
 
 Server_loop = asyncio.get_event_loop()
-#discord server (guild)
+# discord server (guild), ну может кто не понял
 class Server:
 
 	generate_embed = lambda mi: discord.Embed()
