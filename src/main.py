@@ -17,21 +17,27 @@ logging.getLogger('discord').setLevel(logging.WARNING)
 logging.getLogger('websockets').setLevel(logging.WARNING)
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 
-import sys, os, signal
+import sys, os, platform, atexit # я знаю, что можно использвать sys, но нихачу
 
 import Bot
 import HelpLoader
 import AboutLoader
 
 def main():
-	def exit(sighnum = None, frame = None):
+	def on_exit(sighnum = None, frame = None):
 		logger.info('Stop playing threads...')
 		servers = Bot.servers.values()
 		for server in servers: server.stop()
 		for server in servers: server.playing_thread.join()
 		logger.info('Program end.\n')
 		sys.exit(0)
-	signal.signal(signal.SIGHUP, exit)
+
+	atexit.register(on_exit)
+	if platform.system() != 'Windows': 
+		import signal
+		signal.signal(signal.SIGHUP, on_exit)
+	else: logger.warning('stop program at ^C')
+
 	try:
 		logger.info('Program start')
 		prefix = os.getenv('PREFIX')
@@ -42,7 +48,5 @@ def main():
 		logger.warning('Interrupted')
 	except Exception as error:
 		logger.exception(error)
-	finally:
-		exit()
 
 if __name__ == '__main__': main()
