@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import os
 import asyncio
+from urllib.parse import urlparse
 
 import logging
 logger = logging.getLogger(__name__)
@@ -239,45 +240,74 @@ async def skip(ctx, count: int = 1):
 async def add(ctx, *args):
 	server = get_server(ctx)
 
-	if len(args) > 1 and args[0] == '--id':
-		pass
-
 	search_query = ' '.join(args)
 	if search_query == '': # просто подключаемя к каналу, если запрос пуст (смотри def play())
 		return True
 
-	mi_list = musicSearch('name', search_query, 5)
+	if len(args) > 1 and args[0] == '--id':
+		mi_list = musicSearch('id', search_query)
+		isPlaylist = True
+	elif urlparse(search_query).netloc == 'vk.com':
+		mi_list = musicSearch('url', search_query)
+		isPlaylist = True
+	else:
+		mi_list = musicSearch('name', search_query, 5)
+		isPlaylist = False
+	
 	if mi_list is None: await ctx.send(embed=MsgEmbed.error('Ошибка поиска!')); return False
 	if mi_list == []: await ctx.send(embed=MsgEmbed.warning('Ничего не найдено!')); return False
 
-	# генерируем и отправляем список треков
-	_list = [f'{i + 1} :  {mi.artist} - {mi.title}' for i,mi in enumerate(mi_list)]
-	emb = MsgEmbed.info('\n'.join(['0. Отмена'] + _list))
-	emb.set_author(name = 'выберите песню', icon_url = icons['search'])
-	await ctx.send(embed = emb)
+	def get_message_check(author):
+		def is_message_correct(message):
+			return message.author == author and message.content.isdigit()
+		return is_message_correct
 
-	# ждём от пользователя индекс трека
-	try:
-		def get_message_check(author):
-			def is_message_correct(message):
-				return message.author == author and message.content.isdigit()
-			return is_message_correct
+	async def askSingleorFull():
+		emb = MsgEmbed.info('\n0. Отмена\n1. Одна песня\n2. Весь плейлист')
+		emb.set_author(name = 'выберите тип загрузки', icon_url = icons['list'])
+		await ctx.send(embed = emb)
 
-		msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
-		index = int(msg.content)
-		if index == 0:
-			await ctx.send(embed=MsgEmbed.warning('Отменено'))
+		try:
+			msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
+			index = int(msg.content)
+			if index == 0: await ctx.send(embed=MsgEmbed.warning('Отменено')); return
+			elif index == 1: return True
+			elif index == 2: return False
+			else: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?')); return
+		except asyncio.exceptions.TimeoutError:
+			await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
+			return
+
+	if isPlaylist: user_pl_ans = await askSingleorFull()
+    
+	if not isPlaylist or user_pl_ans:
+		# генерируем и отправляем список треков
+		_list = [f'{i + 1} :  {mi.artist} - {mi.title}' for i,mi in enumerate(mi_list)]
+		emb = MsgEmbed.info('\n'.join(['0. Отмена'] + _list))
+		emb.set_author(name = 'выберите песню', icon_url = icons['search'])
+		await ctx.send(embed = emb)
+
+		# ждём от пользователя индекс трека
+		try:
+			msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
+			index = int(msg.content)
+			if index == 0:
+				await ctx.send(embed=MsgEmbed.warning('Отменено'))
+				return False
+			index -= 1
+			if 0 <= index < len(mi_list): mi = mi_list[index]
+			else: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?')); return False
+		except asyncio.exceptions.TimeoutError:
+			await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
 			return False
-		index -= 1
-		if 0 <= index < len(mi_list): mi = mi_list[index]
-		else: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?')); return False
-	except asyncio.exceptions.TimeoutError:
-		await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
-		return False
 
-	# пытаемся добавить трек в плейлист
-	if server.playlist.add(mi): await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
-	else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!')); return False
+		# пытаемся добавить трек в плейлист
+		if server.playlist.add(mi): await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
+		else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!')); return False
+	elif user_pl_ans is None:
+		return False
+	else:
+		pass
 
 	return True
 
