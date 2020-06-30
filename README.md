@@ -1,4 +1,4 @@
-# Установка и запуск Windows / Linux (ставил на убунту)
+# Установка и запуск Windows / Linux
 0. установить [петухон и пип](https://www.python.org/)
 1. установить [ffmpeg](https://ffmpeg.org/) ***(и прописать его в [PATH](http://g.zeos.in/?q=PATH%20windows) для Windows)***
 2. установить [pipenv](https://pypi.org/project/pipenv/) 
