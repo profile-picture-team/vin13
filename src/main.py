@@ -24,7 +24,7 @@ import HelpLoader
 import AboutLoader
 
 def main():
-	def on_exit(sighnum = None, frame = None):
+	def on_exit():
 		logger.info('Stop playing threads...')
 		servers = Bot.servers.values()
 		for server in servers: server.stop()
@@ -32,12 +32,16 @@ def main():
 		logger.info('Program end.')
 		sys.exit(0)
 
+	def on_terminate(sighnum, frame):
+		logger.warning('Non ^C closing!')
+		sys.exit(0)
+
 	atexit.register(on_exit)
 	if platform.system() != 'Windows': 
 		import signal
-		signal.signal(signal.SIGHUP, on_exit)
+		signal.signal(signal.SIGHUP, on_terminate)
 	else: 
-		logger.warning('stop program at ^C')
+		logger.warning('Stop program at ^C')
 
 	try:
 		logger.info('Program start')
