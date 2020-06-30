@@ -3,10 +3,10 @@ import logging.config
 
 #region shit
 logging.basicConfig(filename="log/main.log", format='%(message)s', level=logging.DEBUG)
-logging.debug('####################\n')
+logging.debug('')
 logging.root.removeHandler(logging.root.handlers[0])
 logging.basicConfig(filename="log/debug.log", format='%(message)s', level=logging.DEBUG)
-logging.debug('####################\n')
+logging.debug('')
 #endregion
 
 logging.config.fileConfig('conf/logging.conf')
@@ -29,14 +29,15 @@ def main():
 		servers = Bot.servers.values()
 		for server in servers: server.stop()
 		for server in servers: server.playing_thread.join()
-		logger.info('Program end.\n')
+		logger.info('Program end.')
 		sys.exit(0)
 
 	atexit.register(on_exit)
 	if platform.system() != 'Windows': 
 		import signal
 		signal.signal(signal.SIGHUP, on_exit)
-	else: logger.warning('stop program at ^C')
+	else: 
+		logger.warning('stop program at ^C')
 
 	try:
 		logger.info('Program start')
