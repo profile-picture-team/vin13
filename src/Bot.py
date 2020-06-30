@@ -227,7 +227,7 @@ async def skip(ctx, count: int = 1):
 	if server_id in servers:
 		server = servers[server_id]
 		if server.playlist.getLength() == 0:
-			await ctx.send(embed=MsgEmbed.error('Скипалка не отросла'));
+			await ctx.send(embed=MsgEmbed.error('Скипалка не отросла'))
 			return
 		for i in range(count - 1):
 			server.playlist.next()
@@ -307,7 +307,17 @@ async def add(ctx, *args):
 	elif user_pl_ans is None:
 		return False
 	else:
-		pass
+		added_songs = 0
+		songs_count = len(mi_list)
+		for mi in mi_list:
+			if server.playlist.add(mi): added_songs += 1; await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
+			else: await ctx.send(embed=MsgEmbed.error(f'Не удалось добавить: {mi.artist} - {mi.title}'))
+		if added_songs == songs_count:
+			await ctx.send(embed=MsgEmbed.ok('Все песни успешно добавлены!'))
+		elif added_songs == 0:
+			await ctx.send(embed=MsgEmbed.error('Ни одна песня не была добавлена!')); return False
+		else:
+			await ctx.send(embed=MsgEmbed.info(f'Добавлено {added_songs} песен(я/и)'))
 
 	return True
 

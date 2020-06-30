@@ -15,7 +15,7 @@ class MusicInfo:
 
 
 	def isCorrect(mi) -> bool:
-		""" Проверяет данные на корректность в обекте типа MusicInfo """
+		""" Проверяет данные на корректность в объекте типа MusicInfo """
 		return \
 			isinstance(mi, MusicInfo) and \
 			isinstance(mi.title, str) and \
