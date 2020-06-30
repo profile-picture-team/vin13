@@ -30,11 +30,11 @@ def main():
 		for server in servers: server.stop()
 		for server in servers: server.playing_thread.join()
 		logger.info('Program end.')
-		sys.exit(0)
+		sys.exit()
 
 	def on_terminate(sighnum, frame):
 		logger.warning('Non ^C closing!')
-		sys.exit(0)
+		sys.exit()
 
 	atexit.register(on_exit)
 	if platform.system() != 'Windows': 
