@@ -210,8 +210,8 @@ async def leave(ctx):
 
 @client.command()
 async def play(ctx, *args):
-	if len(args) > 0: await add(ctx, *args)
-	if await join(reconnect = False): get_server(ctx).start()
+	if await add(ctx, *args):
+		if await join(ctx, reconnect = False): get_server(ctx).start()
 
 
 @client.command()
@@ -239,14 +239,16 @@ async def skip(ctx, count: int = 1):
 async def add(ctx, *args):
 	server = get_server(ctx)
 
-	search_query = ' '.join(args)
-	if search_query == '':
-		await ctx.send(embed=MsgEmbed.warning('Хватит зря расходовать ресурсы бота'))
-		return
+	if len(args) > 1 and args[0] == '--id':
+		pass
 
-	mi_list = musicSearch('vk', search_query, 5)
-	if mi_list is None: await ctx.send(embed=MsgEmbed.error('Ошибка поиска!')); return
-	if mi_list == []: await ctx.send(embed=MsgEmbed.warning('Ничего не найдено!')); return
+	search_query = ' '.join(args)
+	if search_query == '': # просто подключаемя к каналу, если запрос пуст (смотри def play())
+		return True
+
+	mi_list = musicSearch('name', search_query, 5)
+	if mi_list is None: await ctx.send(embed=MsgEmbed.error('Ошибка поиска!')); return False
+	if mi_list == []: await ctx.send(embed=MsgEmbed.warning('Ничего не найдено!')); return False
 
 	# генерируем и отправляем список треков
 	_list = [f'{i + 1} :  {mi.artist} - {mi.title}' for i,mi in enumerate(mi_list)]
@@ -265,17 +267,19 @@ async def add(ctx, *args):
 		index = int(msg.content)
 		if index == 0:
 			await ctx.send(embed=MsgEmbed.warning('Отменено'))
-			return
+			return False
 		index -= 1
 		if 0 <= index < len(mi_list): mi = mi_list[index]
-		else: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?')); return
+		else: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?')); return False
 	except asyncio.exceptions.TimeoutError:
 		await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
-		return
+		return False
 
 	# пытаемся добавить трек в плейлист
 	if server.playlist.add(mi): await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
-	else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!')); return
+	else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!')); return False
+
+	return True
 
 
 @client.command()

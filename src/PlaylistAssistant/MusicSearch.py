@@ -10,14 +10,14 @@ default_image = 'https://img.icons8.com/pastel-glyph/FFFFFF/music-record.png'
 
 session = requests.Session()
 
-def musicSearch(service, q, count = 0):
+def musicSearch(stype, q, count = 0):
 	"""
-		Вызывает функцию поиска для соответствующего сервиса
+		Вызывает функцию поиска для соответствующего типа поиска
 		Возвращает список объектов MusicInfo
 		При ошибке возвращает None
 	"""
-	service = str(service)
-	if service.lower() == 'vk': return musicSearchVK(q, count)
+	stype = str(stype)
+	if stype.lower() == 'name': return musicSearchVK(q, count)
 	return None
 
 # https://vk.music7s.cc/api/get_playlist.php?id=
