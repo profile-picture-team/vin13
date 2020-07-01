@@ -12,6 +12,7 @@ logging.debug('')
 logging.config.fileConfig('conf/logging.conf')
 logger = logging.getLogger(__name__)
 # надо разобраться с этими логерами (ну так разберись)
+# лол, а я знаю как?
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 logging.getLogger('discord').setLevel(logging.WARNING)
 logging.getLogger('websockets').setLevel(logging.WARNING)
@@ -30,11 +31,11 @@ def main():
 		for server in servers: server.stop()
 		for server in servers: server.playing_thread.join()
 		logger.info('Program end.')
-		sys.exit()
+		sys.exit(0)
 
 	def on_terminate(sighnum, frame):
 		logger.warning('Non ^C closing!')
-		sys.exit()
+		sys.exit(0)
 
 	atexit.register(on_exit)
 	if platform.system() != 'Windows': 
@@ -51,6 +52,7 @@ def main():
 		Bot.client.run(os.getenv('BOT_TOKEN'))
 	except KeyboardInterrupt:
 		logger.warning('Interrupted')
+		on_exit()
 	except Exception as error:
 		logger.exception(error)
 
