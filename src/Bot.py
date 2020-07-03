@@ -95,7 +95,7 @@ async def on_ready():
 		status=discord.Status.online,
 		activity=discord.Activity(
 			type=discord.ActivityType.watching,
-			name="hentai"
+			name="futa on hanime"
 		)
 	)
 	logger.info('Bot ready')
@@ -121,6 +121,19 @@ async def on_command_error(ctx, error):
 		await ctx.send(embed=MsgEmbed.error(f'Глаза разуй! Такого аргумента нет! `{ctx.prefix}help {ctx.command}` - для справки'))
 	else:
 		raise error
+
+@client.event
+async def on_voice_state_update(member, before, after):
+	if before.channel is None: return
+	if after.channel is not None and before.channel.id == after.channel.id: return
+	sid = before.channel.guild.id
+	if not sid in servers: return
+	voice = servers[sid].voice
+	if voice is None: return
+	if voice.channel.id != before.channel.id: return
+	if voice.is_connected() and len(voice.channel.members) == 1: 
+		if after.channel is None: await voice.disconnect()
+		else: await voice.move_to(after.channel)
 
 #endregion
 
