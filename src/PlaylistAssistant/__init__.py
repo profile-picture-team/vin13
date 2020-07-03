@@ -13,6 +13,6 @@ sys.path.insert(0, folder)
 
 from Playlist import Playlist
 from MusicInfo import MusicInfo
-from MusicSearch import musicSearch, musicSearchVK
+from MusicSearch import VkSearch
 
 del sys.path[0]

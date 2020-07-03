@@ -12,6 +12,9 @@ from PlaylistAssistant import *
 from Server import Server
 from GenEmbed import MsgEmbed
 
+# Жму F за всех кому надо работать с этим кодом
+
+
 #region var
 
 icons = {
@@ -211,7 +214,7 @@ async def leave(ctx):
 
 @client.command()
 async def play(ctx, *args):
-	if await add(ctx, *args):
+	if len(args) == 0 or await add(ctx, *args):
 		if await join(ctx, reconnect = False): get_server(ctx).start()
 
 
@@ -240,19 +243,28 @@ async def skip(ctx, count: int = 1):
 async def add(ctx, *args):
 	server = get_server(ctx)
 
-	search_query = ' '.join(args)
-	if search_query == '': # просто подключаемя к каналу, если запрос пуст (смотри def play())
-		return True
+	if len(args) == 0:
+		await ctx.send(embed=MsgEmbed.error("Недосдача по аргументам, жмот"))
+		return False
 
-	if len(args) > 1 and args[0] == '--id':
-		mi_list = musicSearch('id', search_query)
+
+	if args[0] == '--id':
+		if len(args) < 2:
+			await ctx.send(embed=MsgEmbed.error("Недосдача по аргументам, жмот"))
+			return False
+		if len(args) > 2:
+			await ctx.send(embed=MsgEmbed.warning("Слишком много аргументов"))
+		mi_list = VkSearch.byPlaylistId(args[1])
 		isPlaylist = True
-	elif urlparse(search_query).netloc == 'vk.com':
-		mi_list = musicSearch('url', search_query)
+	elif VkSearch.isCorrectPlaylistUrl(args[0]):
+		if len(args) > 1:
+			await ctx.send(embed=MsgEmbed.warning("Слишком много аргументов"))
+		mi_list = VkSearch.byPlaylistUrl(args[0])
 		isPlaylist = True
 	else:
-		mi_list = musicSearch('name', search_query, 5)
+		mi_list = VkSearch.byString(' '.join(args), 5)
 		isPlaylist = False
+	
 	
 	if mi_list is None: await ctx.send(embed=MsgEmbed.error('Ошибка поиска!')); return False
 	if mi_list == []: await ctx.send(embed=MsgEmbed.warning('Ничего не найдено!')); return False
