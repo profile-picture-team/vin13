@@ -3,7 +3,6 @@ from discord.ext import commands
 
 import os
 import asyncio
-from urllib.parse import urlparse
 
 import logging
 logger = logging.getLogger(__name__)
@@ -83,6 +82,7 @@ async def join_to_channel(ctx, channel):
 	except:
 		logger.exception(f'Server: {server_id}. Join error: unknown')
 		return 2
+	server.ctx = ctx
 	return 0
 
 #endregion
@@ -143,7 +143,8 @@ async def join(ctx, channel_name = '', *, reconnect = True):
 	server_id = ctx.guild.id
 	
 	if not reconnect:
-		voice = get_server(ctx).voice
+		server = get_server(ctx) 
+		voice = server.voice
 		if voice and voice.is_connected(): return True
 
 	# получаем канал для подключения (или вылетаем с ошибкой)
@@ -193,7 +194,7 @@ async def join(ctx, channel_name = '', *, reconnect = True):
 			
 
 	result = await join_to_channel(ctx, channel)
-	if result == 0: await ctx.send(embed=MsgEmbed.ok(f'Бот подключился к каналу: {channel}'))
+	if result == 0:	await ctx.send(embed=MsgEmbed.ok(f'Бот подключился к каналу: {channel}'))
 	elif result == 1: await ctx.send(embed=MsgEmbed.warning(f'Бот уже подключен к каналу: {channel}'))
 	elif result == 2: await ctx.send(embed=MsgEmbed.error(f'Ты че наделал?'))
 	else: await ctx.send(embed=MsgEmbed.error('Ничего не понял, но очень интересно'))
@@ -215,7 +216,10 @@ async def leave(ctx):
 @client.command()
 async def play(ctx, *args):
 	if len(args) == 0 or await add(ctx, *args):
-		if await join(ctx, reconnect = False): get_server(ctx).start()
+		if await join(ctx, reconnect = False):
+			server = get_server(ctx)
+			server.playlist.prev()
+			server.start()
 
 
 @client.command()
@@ -226,18 +230,17 @@ async def pause(ctx):
 
 @client.command()
 async def skip(ctx, count: int = 1):
-	server_id = ctx.guild.id
-	if server_id in servers:
-		server = servers[server_id]
-		if server.playlist.getLength() == 0:
-			await ctx.send(embed=MsgEmbed.error('Скипалка не отросла'))
-			return
-		for i in range(count - 1):
-			server.playlist.next()
-		server.voice.stop()
-	else:
-		await ctx.send(embed=MsgEmbed.error('Может ты плейлист создашь прежде чем скипать?'))
-
+	server = get_server(ctx)
+	voice = server.voice
+	playlist = server.playlist
+	if playlist.getLength() == 0:
+		await ctx.send(embed=MsgEmbed.error('Скипалка не отросла'))
+		return
+	for i in range(count - 1):
+		playlist.next()
+	if voice:
+		voice.stop()
+	
 
 @client.command()
 async def add(ctx, *args):
@@ -388,5 +391,14 @@ async def queue(ctx):
 async def about(ctx):
 	await ctx.send(embed=MsgEmbed.info(about_docs))
 	pass	
+
+
+@client.command()
+async def mix(ctx):
+	server = get_server(ctx)
+	playlist = server.playlist
+	playlist.mix()
+	playlist.position = playlist.getLength() - 1
+	await skip(ctx)
 
 #endregion
