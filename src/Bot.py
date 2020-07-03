@@ -126,7 +126,7 @@ async def on_command_error(ctx, error):
 
 #region @client.command
 
-@client.command(name='help')
+@client.command(name='help', aliases=['h'])
 async def _help(ctx, cmd=''):
 	if cmd == '':
 		await ctx.send(help_docs['main-page'])
@@ -138,7 +138,7 @@ async def _help(ctx, cmd=''):
 		await ctx.send(help_docs['commands']['not-exist'].format(cmd=cmd))
 
 
-@client.command()
+@client.command(aliases=['j'])
 async def join(ctx, channel_name = '', *, reconnect = True):
 	server_id = ctx.guild.id
 	
@@ -203,17 +203,17 @@ async def join(ctx, channel_name = '', *, reconnect = True):
 	return 0 <= result <= 1
 
 
-@client.command()
+@client.command(aliases=['l'])
 async def leave(ctx):
 	voice = get_server(ctx).voice
 	if voice and voice.is_connected():
 		await voice.disconnect()
 		await ctx.send(embed=MsgEmbed.warning('Бот отключился'))
 	else:
-		await ctx.send(embed=MsgEmbed.error('Этим можно просто брать и обмазываться'))
+		await ctx.send(embed=MsgEmbed.warning('Этим можно просто брать и обмазываться'))
 	
 
-@client.command()
+@client.command(aliases=['p'])
 async def play(ctx, *args):
 	if len(args) == 0 or await add(ctx, *args):
 		if await join(ctx, reconnect = False):
@@ -222,19 +222,19 @@ async def play(ctx, *args):
 			server.start()
 
 
-@client.command()
+@client.command(aliases=['pa'])
 async def pause(ctx):
 	voice = get_server(ctx).voice
 	if voice: voice.pause()
 
 
-@client.command()
+@client.command(aliases=['s'])
 async def skip(ctx, count: int = 1):
 	server = get_server(ctx)
 	voice = server.voice
 	playlist = server.playlist
 	if playlist.getLength() == 0:
-		await ctx.send(embed=MsgEmbed.error('Скипалка не отросла'))
+		await ctx.send(embed=MsgEmbed.warning('Скипалка не отросла'))
 		return
 	for i in range(count - 1):
 		playlist.next()
@@ -242,7 +242,7 @@ async def skip(ctx, count: int = 1):
 		voice.stop()
 	
 
-@client.command()
+@client.command(aliases=['a'])
 async def add(ctx, *args):
 	server = get_server(ctx)
 
@@ -288,7 +288,7 @@ async def add(ctx, *args):
 			if index == 0: await ctx.send(embed=MsgEmbed.warning('Отменено')); return
 			elif index == 1: return True
 			elif index == 2: return False
-			else: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?')); return
+			else: await ctx.send(embed=MsgEmbed.warning('Ты кто такой, сука, чтоб это делать?')); return
 		except asyncio.exceptions.TimeoutError:
 			await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
 			return
@@ -311,7 +311,7 @@ async def add(ctx, *args):
 				return False
 			index -= 1
 			if 0 <= index < len(mi_list): mi = mi_list[index]
-			else: await ctx.send(embed=MsgEmbed.error('Ты кто такой, сука, чтоб это делать?')); return False
+			else: await ctx.send(embed=MsgEmbed.warning('Ты кто такой, сука, чтоб это делать?')); return False
 		except asyncio.exceptions.TimeoutError:
 			await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
 			return False
@@ -326,7 +326,7 @@ async def add(ctx, *args):
 		songs_count = len(mi_list)
 		for mi in mi_list:
 			if server.playlist.add(mi): added_songs += 1; await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
-			else: await ctx.send(embed=MsgEmbed.error(f'Не удалось добавить: {mi.artist} - {mi.title}'))
+			else: await ctx.send(embed=MsgEmbed.warning(f'Не удалось добавить: {mi.artist} - {mi.title}'))
 		if added_songs == songs_count:
 			await ctx.send(embed=MsgEmbed.ok('Все песни успешно добавлены!'))
 		elif added_songs == 0:
@@ -337,7 +337,7 @@ async def add(ctx, *args):
 	return True
 
 
-@client.command()
+@client.command(aliases=['r'])
 async def remove(ctx, arg):
 	server = get_server(ctx)
 
@@ -351,7 +351,7 @@ async def remove(ctx, arg):
 	else: pos = int(arg)
 
 	if not 0 <= pos < server.playlist.getLength():
-		await ctx.send(embed=MsgEmbed.error('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..'))
+		await ctx.send(embed=MsgEmbed.warning('Как может в казино быть колода разложена в другом порядке?! Ты чё, бредишь, что ли?! Ёбаный твой рот, а!..'))
 		return
 	
 	mi = server.playlist.getByPosition(pos)
@@ -361,7 +361,7 @@ async def remove(ctx, arg):
 	else: await ctx.send(embed=MsgEmbed.error('Ошибка удаления'))
 
 
-@client.command()
+@client.command(aliases=['pl'])
 async def playing(ctx):
 	playlist = get_server(ctx).playlist
 	if playlist.getLength() == 0:
@@ -370,7 +370,7 @@ async def playing(ctx):
 	await ctx.send(embed=get_mi_embed(playlist.getCurrent()))
 
 
-@client.command()
+@client.command(aliases=['q'])
 async def queue(ctx):
 	server = get_server(ctx)
 
@@ -387,16 +387,19 @@ async def queue(ctx):
 	await ctx.send(embed = emb)
 
 
-@client.command()
+@client.command(aliases=['ab'])
 async def about(ctx):
 	await ctx.send(embed=MsgEmbed.info(about_docs))
 	pass	
 
 
-@client.command()
+@client.command(aliases=['m'])
 async def mix(ctx):
 	server = get_server(ctx)
 	playlist = server.playlist
+	if playlist.getLength() == 0:
+		await ctx.send(embed=MsgEmbed.warning('Плейлист пуст, животное'))
+		return
 	playlist.mix()
 	playlist.position = playlist.getLength() - 1
 	await skip(ctx)
