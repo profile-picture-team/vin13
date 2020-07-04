@@ -91,7 +91,7 @@ async def send_long_list(ctx, items, first_embed: discord.Embed, last_embed: dis
 		"""Ctrl+C Ctrl+V"""
 		for i in range(0, len(l), n):
 			yield l[i:i + n]
-	_chunks = list(chunks(items, 10))
+	_chunks = list(chunks(items, 30))
 	
 	if len(_chunks) >= 1:
 		embed = first_embed
@@ -350,9 +350,10 @@ async def add(ctx, *args):
 	if not isPlaylist or user_pl_ans:
 		# генерируем и отправляем список треков
 		_list = [f'{i + 1} :  {mi.artist} - {mi.title}' for i,mi in enumerate(mi_list)]
-		emb = MsgEmbed.info('\n'.join(['0. Отмена'] + _list))
+		_list.insert(0, '0. Отмена')
+		emb = MsgEmbed.info('')
 		emb.set_author(name = 'выберите песню', icon_url = icons['search'])
-		await ctx.send(embed = emb)
+		await send_long_list(ctx, _list, emb, MsgEmbed.info(''))
 
 		# ждём от пользователя индекс трека
 		try:
