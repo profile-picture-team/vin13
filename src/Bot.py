@@ -124,17 +124,23 @@ async def on_command_error(ctx, error):
 
 @client.event
 async def on_voice_state_update(member, before, after):
-	if before.channel is None: return
-	if after.channel is not None and before.channel.id == after.channel.id: return
-	sid = before.channel.guild.id
+	before_channel = before.channel
+	after_channel = after.channel
+	if before_channel is None: return
+	if after_channel is not None and before_channel.id == after_channel.id: return
+	sid = before_channel.guild.id
 	if not sid in servers: return
 	server = servers[sid]
 	voice = server.voice
 	if voice is None: return
-	if voice.channel.id != before.channel.id: return
+	bot_id = client.user.id
+	before_members = before_channel.members
+	if len(before_members) != 1 or before_members[0].bot == True and before_members[0].id != bot_id: return
 	if len(voice.channel.members) > 1: return
+	if after_channel and after_channel.members[0].id == bot_id: await voice.move_to(before_channel); return
+	if voice.channel.id != before_channel.id: return
 	if voice.is_connected(): 
-		if after.channel is None: await voice.disconnect(); await server.ctx.send(
+		if after_channel is None: await voice.disconnect(); await server.ctx.send(
 			embed = discord.Embed(
 				description = 'пока-пока :two_hearts:',
 				colour=0xd72d42
