@@ -128,12 +128,19 @@ async def on_voice_state_update(member, before, after):
 	if after.channel is not None and before.channel.id == after.channel.id: return
 	sid = before.channel.guild.id
 	if not sid in servers: return
-	voice = servers[sid].voice
+	server = servers[sid]
+	voice = server.voice
 	if voice is None: return
 	if voice.channel.id != before.channel.id: return
 	if voice.is_connected() and len(voice.channel.members) == 1: 
 		if after.channel is None: await voice.disconnect()
 		else: await voice.move_to(after.channel)
+	else: await server.ctx.send(
+		embed = discord.Embed(
+			description = 'пока-пока :two_hearts:',
+			colour=0xd72d42
+			)
+		)
 
 #endregion
 
