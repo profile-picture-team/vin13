@@ -85,6 +85,28 @@ async def join_to_channel(ctx, channel):
 	server.ctx = ctx
 	return 0
 
+async def send_long_list(ctx, items, first_embed: discord.Embed, last_embed: discord.Embed):
+	def chunks(l, n):
+		"""Yield successive n-sized chunks from l."""
+		"""Ctrl+C Ctrl+V"""
+		for i in range(0, len(l), n):
+			yield l[i:i + n]
+	_chunks = list(chunks(items, 10))
+	
+	if len(_chunks) >= 1:
+		embed = first_embed
+		embed.description = '\n'.join(_chunks[0])
+		await ctx.send(embed=embed)
+	if len(_chunks) >= 3:
+		embed = discord.Embed(colour=embed.colour)
+		for chunk in _chunks[1:-1]:
+			embed.description = '\n'.join(chunk)
+			await ctx.send(embed=embed)
+	if len(_chunks) >= 2:
+		embed = last_embed
+		embed.description = '\n'.join(_chunks[-1])
+		await ctx.send(embed=embed)
+
 #endregion
 
 #region @client.events
@@ -100,10 +122,12 @@ async def on_ready():
 	)
 	logger.info('Bot ready')
 
+
 @client.event
 async def on_error(event, ctx, *args, **kwargs):
 	logger.exception(f'Exception in on_error. Event: {event}')
 	await ctx.send(embed=MsgEmbed.error('!!! ОШИБКА !!!'))
+
 
 @client.event
 async def on_command(ctx):
@@ -140,10 +164,12 @@ async def on_voice_state_update(member, before, after):
 	if after_channel and after_channel.members[0].id == bot_id: await voice.move_to(before_channel); return
 	if voice.channel.id != before_channel.id: return
 	if voice.is_connected(): 
-		if after_channel is None: await voice.disconnect(); await server.ctx.send(
-			embed = discord.Embed(
-				description = 'пока-пока :two_hearts:',
-				colour=0xd72d42
+		if after_channel is None:
+			await voice.disconnect()
+			await server.ctx.send(
+				embed = MsgEmbed.get(
+					(0xd72d42, '{msg} :two_hearts:'),
+					'Пока-пока'
 				)
 			)
 		else: await voice.move_to(after.channel)
@@ -348,17 +374,26 @@ async def add(ctx, *args):
 	elif user_pl_ans is None:
 		return False
 	else:
+		def nice_embed(msg):
+			return MsgEmbed.info(f'Добавлено: {added_songs}/{songs_count}. Ошибки: {error_songs}\n{msg}')
+
 		added_songs = 0
+		error_songs = 0
 		songs_count = len(mi_list)
+		message = await ctx.send(embed=MsgEmbed.info('Загрузка плейлиста...'))
 		for mi in mi_list:
-			if server.playlist.add(mi): added_songs += 1; await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
-			else: await ctx.send(embed=MsgEmbed.warning(f'Не удалось добавить: {mi.artist} - {mi.title}'))
+			if server.playlist.add(mi):
+				added_songs += 1
+				await message.edit(embed=nice_embed(f'Добавил: {mi.artist} - {mi.title}'))
+			else:
+				error_songs += 1
+				await message.edit(embed=nice_embed(f'Не удалось добавить: {mi.artist} - {mi.title}'))
 		if added_songs == songs_count:
-			await ctx.send(embed=MsgEmbed.ok('Все песни успешно добавлены!'))
+			await message.edit(embed=MsgEmbed.ok('Все песни успешно добавлены!'))
 		elif added_songs == 0:
-			await ctx.send(embed=MsgEmbed.error('Ни одна песня не была добавлена!')); return False
+			await message.edit(embed=MsgEmbed.warning('Ни одна песня не была добавлена!')); return False
 		else:
-			await ctx.send(embed=MsgEmbed.info(f'Добавлено {added_songs} песен(я/и)'))
+			await message.edit(embed=MsgEmbed.warning(f'Добавлено песен: {added_songs}. Ошибки: {error_songs} '))
 
 	return True
 
@@ -401,16 +436,16 @@ async def queue(ctx):
 	server = get_server(ctx)
 
 	if server.playlist.getLength() == 0:
-		emb = MsgEmbed.info('Плейлист пуст')
+		await ctx.send(embed = MsgEmbed.info('Плейлист пуст'))
 	else:
 		mi_list = server.playlist.getAll()
 		_list = [f'{i} :  {mi.artist} - {mi.title}' for i,mi in enumerate(mi_list)]
 		pos = server.playlist.getPosition()
 		_list[pos] = f'**{_list[pos]}**'
-		emb = MsgEmbed.info('\n'.join(_list))
 
-	emb.set_author(name = 'текущий плейлист', icon_url = icons['playlist'])
-	await ctx.send(embed = emb)
+		emb = MsgEmbed.info('')
+		emb.set_author(name = 'текущий плейлист', icon_url = icons['playlist'])
+		await send_long_list(ctx, _list, emb, MsgEmbed.info(''))
 
 
 @client.command(aliases=['ab'])
