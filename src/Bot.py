@@ -379,22 +379,16 @@ async def add(ctx, *args):
 			return MsgEmbed.info(f'Добавлено: {added_songs}/{songs_count}. Ошибки: {error_songs}\n{msg}')
 
 		added_songs = 0
-		error_songs = 0
 		songs_count = len(mi_list)
 		message = await ctx.send(embed=MsgEmbed.info('Загрузка плейлиста...'))
 		for mi in mi_list:
-			if server.playlist.add(mi):
-				added_songs += 1
-				await message.edit(embed=nice_embed(f'Добавил: {mi.artist} - {mi.title}'))
-			else:
-				error_songs += 1
-				await message.edit(embed=nice_embed(f'Не удалось добавить: {mi.artist} - {mi.title}'))
+			if server.playlist.add(mi): added_songs += 1
 		if added_songs == songs_count:
 			await message.edit(embed=MsgEmbed.ok('Все песни успешно добавлены!'))
 		elif added_songs == 0:
 			await message.edit(embed=MsgEmbed.warning('Ни одна песня не была добавлена!')); return False
 		else:
-			await message.edit(embed=MsgEmbed.warning(f'Добавлено песен: {added_songs}. Ошибки: {error_songs} '))
+			await message.edit(embed=MsgEmbed.warning(f'Добавлено: {added_songs}/{songs_count}'))
 
 	return True
 
