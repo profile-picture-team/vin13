@@ -10,6 +10,7 @@ class MsgEmbed:
 		ok      = (0x006b12, ":white_check_mark: {msg}")
 		warning = (0xadad00, ":warning: {msg}")
 		error   = (0xa30000, ":anger: {msg}")
+		hearts  = (0xd72d42, "{msg} :two_hearts:")
 
 
 	def get(type: Types, msg: str) -> discord.Embed:
@@ -39,4 +40,9 @@ class MsgEmbed:
 	def error(msg: str) -> discord.Embed:
 		""" Возвращает discord.Embed типа error с сообщением msg """
 		color, msg_template = MsgEmbed.Types.error
+		return discord.Embed(description=msg_template.format(msg=msg), colour=color)
+
+	def hearts(msg: str) -> discord.Embed:
+		""" Возвращает discord.Embed типа hearts с сообщением msg """
+		color, msg_template = MsgEmbed.Types.hearts
 		return discord.Embed(description=msg_template.format(msg=msg), colour=color)

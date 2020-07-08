@@ -161,18 +161,18 @@ async def on_voice_state_update(member, before, after):
 	before_members = before_channel.members
 	if len(before_members) != 1 or before_members[0].bot == True and before_members[0].id != bot_id: return
 	if len(voice.channel.members) > 1: return
-	if after_channel and after_channel.members[0].id == bot_id: await voice.move_to(before_channel); return
+	if after_channel and after_channel.members[0].id == bot_id: 
+		await voice.move_to(before_channel)
+		await server.ctx.send(embed = MsgEmbed.hearts('Не надо стесняться'))
+		return
 	if voice.channel.id != before_channel.id: return
 	if voice.is_connected(): 
 		if after_channel is None:
 			await voice.disconnect()
-			await server.ctx.send(
-				embed = MsgEmbed.get(
-					(0xd72d42, '{msg} :two_hearts:'),
-					'Пока-пока'
-				)
-			)
-		else: await voice.move_to(after.channel)
+			await server.ctx.send(embed = MsgEmbed.hearts('Пока-пока'))
+		else: 
+			await voice.move_to(after.channel)
+			await server.ctx.send(embed = MsgEmbed.hearts(f'Ты куда, {after_channel.members[0].mention}?'))
 
 #endregion
 
