@@ -357,8 +357,12 @@ async def add(ctx, *args) -> Optional[bool]:
 		if answer == 0: return await cancel()
 		if 1 <= answer <= len(mi_list): mi = mi_list[answer - 1]
 		else: return bad_answer()
-		if server.playlist.add(mi): await ctx.send(embed=MsgEmbed.ok(f'Добавил: {mi.artist} - {mi.title}'))
-		else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!'))
+		if server.playlist.add(mi):
+			await ctx.send(embed=MsgEmbed.ok(f'Добавил: {mi.artist} - {mi.title}'))
+			return True
+		else:
+			await ctx.send(embed=MsgEmbed.warning('Ошибка добавления!'))
+			return False
 
 	async def load_playlist():
 		method = {
