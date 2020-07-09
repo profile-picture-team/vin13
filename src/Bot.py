@@ -3,6 +3,7 @@ from discord.ext import commands
 
 import os
 import asyncio
+from typing import *
 
 import logging
 logger = logging.getLogger(__name__)
@@ -29,7 +30,13 @@ client.remove_command('help')
 
 #endregion
 
-#region get_server/mi_embed, join_to_channel
+#region utility
+
+
+def member_is_connected(member: discord.Member, voice_channel: discord.VoiceChannel = None) -> bool:
+	if voice_channel is None: return member.voice
+	else: return member.voice and member.voice.channel == voice_channel
+
 
 def get_server(ctx) -> Server:
 	"""
@@ -43,16 +50,42 @@ def get_server(ctx) -> Server:
 		server = Server(ctx=ctx, playlist=Playlist(loop=True))
 		servers[server_id] = server
 		return server
-		
 
-def get_mi_embed(mi):
+
+def get_message_check(author):
+	def is_message_correct(message):
+		return message.author == author and message.content.isdigit()
+	return is_message_correct
+
+
+def get_mi_embed(mi: MusicInfo) -> discord.Embed:
 	emb = MsgEmbed.info('')
 	emb.set_author(name = f'{mi.artist} - {mi.title} [ {mi.time} сек ]', icon_url = mi.image_url)
 	return emb
 Server.generate_embed = get_mi_embed
 
 
-async def join_to_channel(ctx, channel):
+async def ask_user(
+	ctx,
+	title: str, choice: List[str],
+	*, icon_url: str = icons['list'],
+	timeout = 10,
+	start_index = 0, step_index = 1
+) -> Optional[int]:
+	choice = [f'{i + start_index}. {x}' for i, x in enumerate(choice)]
+	emb = MsgEmbed.info('')
+	emb.set_author(name = title, icon_url = icon_url)
+	await send_long_list(ctx, choice, emb, MsgEmbed.info(''))
+	try:
+		msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=timeout)
+	except asyncio.exceptions.TimeoutError:
+		await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
+		return None
+	else:
+		return int(msg.content)
+
+
+async def join_to_channel(ctx, channel) -> int:
 	"""
 		Подключает бота к каналу
 		return 0 - всё ок
@@ -85,7 +118,9 @@ async def join_to_channel(ctx, channel):
 	server.ctx = ctx
 	return 0
 
+
 async def send_long_list(ctx, items, first_embed: discord.Embed, last_embed: discord.Embed):
+	""" Отправляет длинный список строк в нескольких discord.Embed """
 	def chunks(l, n):
 		"""Yield successive n-sized chunks from l."""
 		"""Ctrl+C Ctrl+V"""
@@ -191,59 +226,42 @@ async def _help(ctx, cmd=''):
 
 
 @client.command(aliases=['j'])
-async def join(ctx, channel_name = '', *, reconnect = True):
-	server_id = ctx.guild.id
+async def join(ctx, channel_name='', *, reconnect = True) -> bool:
 	
-	if not reconnect:
-		server = get_server(ctx) 
-		voice = server.voice
-		if voice and voice.is_connected(): return True
+	async def get_voice_channel() -> Optional[discord.VoiceChannel]:
+		if channel_name == '':
+			if not member_is_connected(ctx.author):
+				await ctx.send(embed=MsgEmbed.error('Присоединись к каналу, мудак'))
+				return None	
+			return ctx.author.voice.channel
+		return get_voice_channel_by_name() 
 
-	# получаем канал для подключения (или вылетаем с ошибкой)
-	if channel_name == '':
-		if ctx.author.voice is None:
-			logger.debug(f'Server: {server_id}. Join error: User is not connected')
-			await ctx.send(embed=MsgEmbed.error('Присоединись к каналу, мудак'))
-			return False
-		channel = ctx.author.voice.channel
-	else:
-		channels = list(filter(lambda x: x.name==channel_name, ctx.guild.voice_channels))
+	async def get_voice_channel_by_name() -> Optional[discord.VoiceChannel]:
+		channels = list(filter(lambda x: x.name == channel_name, ctx.guild.voice_channels))
 		if len(channels) == 0:
-			logger.debug(f'Server: {server_id}. Join error: Channel not found')
 			await ctx.send(embed=MsgEmbed.error('Ты инвалид? Название канала неправильное'))
-			return False
-		elif len(channels) == 1: channel = channels[0]
+			return None
+		elif len(channels) == 1: return channels[0]
 		else:
-			# составляем список каналов и отправляем его
-			_list = [f'{i + 1} :  {x} ({x.position + 1}-й)\n' for i,x in enumerate(channels)]
-			emb = MsgEmbed.info(''.join(['0. Отмена\n'] + _list))
-			emb.set_author(name = 'выберите канал', icon_url = icons['list'])
-			await ctx.send(embed = emb)
-			
-			def get_message_check(author):
-				def is_message_correct(message):
-					return message.author == author and message.content.isdigit()
-				return is_message_correct
+			choice = [f' {x} ({x.position + 1}-й)\n' for x in channels]
+			choice.insert(0, 'Отмена')
+			answer = await ask_user(ctx, 'выбери канал', choice, icon_url = icons['list'])
+			if answer is None: return None
+			if answer == 0:
+				await ctx.send(embed=MsgEmbed.warning('Подключение отменено'))
+				return None
+			if 1 <= answer <= len(channels):
+				return channels[answer - 1]
+			await ctx.send(embed=MsgEmbed.warning('Ты кто такой, сука, чтоб это делать?'))
+			return None
 
-			# обрабатываем ответ пользователя
-			try:
-				# ждем пока автор ответит числом
-				msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
-				index = int(msg.content)
 
-				if index == 0:
-					logger.debug(f'Server: {server_id}. Joining canceled')
-					await ctx.send(embed=MsgEmbed.warning('Подключение отменено'))
-					return False
-				if index > len(channels):
-					await ctx.send(embed=MsgEmbed.warning('Пользователь дурак. Подключение отменено'))
-					return False
-				channel = channels[index - 1]
-			except asyncio.exceptions.TimeoutError:
-				logger.debug(f'Server: {server_id}. Join error: User answer timeout')
-				await ctx.send(embed=MsgEmbed.warning('Время вышло. Подключение отменено'))
-				return False
-			
+	if not reconnect:
+		voice = get_server(ctx).voice
+		if voice and voice.is_connected(): return True
+	
+	channel = await get_voice_channel()
+	if channel is None: return False
 
 	result = await join_to_channel(ctx, channel)
 	if result == 0:	await ctx.send(embed=MsgEmbed.ok(f'Бот подключился к каналу: {channel}'))
@@ -295,102 +313,88 @@ async def skip(ctx, count: int = 1):
 	
 
 @client.command(aliases=['a'])
-async def add(ctx, *args):
-	server = get_server(ctx)
+async def add(ctx, *args) -> Optional[bool]:
+	"""
+		Добавляет в плейлист сервера новые треки
+		
+		args == ['--id', '...'] - поиск плейлиста по id
+		args == ['url'] - поиск плейлиста по ссылке
+		args == [...] - поиск трека по ключевым словам
 
-	if len(args) == 0:
-		await ctx.send(embed=MsgEmbed.error("Недосдача по аргументам, жмот"))
+		return True  - в плейлист был добавлен хотя бы 1 трек
+		return False - в плейлист не было ничего добавлено
+		return None  - таймаут, некорректные данные пользователя, ошибка апи
+	"""
+
+	async def cancel():
+		await ctx.send(embed=MsgEmbed.warning('Отменено'))
 		return False
 
+	async def bad_answer():
+		await ctx.send(embed=MsgEmbed.warning('Ты кто такой, сука, чтоб это делать?'))
+		return None
 
-	if args[0] == '--id':
-		if len(args) < 2:
-			await ctx.send(embed=MsgEmbed.error("Недосдача по аргументам, жмот"))
-			return False
-		if len(args) > 2:
-			await ctx.send(embed=MsgEmbed.warning("Слишком много аргументов"))
-		mi_list = VkSearch.byPlaylistId(args[1])
-		isPlaylist = True
-	elif VkSearch.isCorrectPlaylistUrl(args[0]):
-		if len(args) > 1:
-			await ctx.send(embed=MsgEmbed.warning("Слишком много аргументов"))
-		mi_list = VkSearch.byPlaylistUrl(args[0])
-		isPlaylist = True
-	else:
-		mi_list = VkSearch.byString(' '.join(args), 5)
-		isPlaylist = False
-	
-	
-	if mi_list is None: await ctx.send(embed=MsgEmbed.error('Ошибка поиска!')); return False
-	if mi_list == []: await ctx.send(embed=MsgEmbed.warning('Ничего не найдено!')); return False
-
-	def get_message_check(author):
-		def is_message_correct(message):
-			return message.author == author and message.content.isdigit()
-		return is_message_correct
-
-	async def askSingleorFull():
-		emb = MsgEmbed.info('\n0. Отмена\n1. Одна песня\n2. Весь плейлист')
-		emb.set_author(name = 'выберите тип загрузки', icon_url = icons['list'])
-		await ctx.send(embed = emb)
-
-		try:
-			msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
-			index = int(msg.content)
-			if index == 0: await ctx.send(embed=MsgEmbed.warning('Отменено')); return
-			elif index == 1: return True
-			elif index == 2: return False
-			else: await ctx.send(embed=MsgEmbed.warning('Ты кто такой, сука, чтоб это делать?')); return
-		except asyncio.exceptions.TimeoutError:
-			await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
-			return
-
-	if isPlaylist: user_pl_ans = await askSingleorFull()
-    
-	if not isPlaylist or user_pl_ans:
-		# генерируем и отправляем список треков
-		_list = [f'{i + 1} :  {mi.artist} - {mi.title}' for i,mi in enumerate(mi_list)]
-		_list.insert(0, '0. Отмена')
-		emb = MsgEmbed.info('')
-		emb.set_author(name = 'выберите песню', icon_url = icons['search'])
-		await send_long_list(ctx, _list, emb, MsgEmbed.info(''))
-
-		# ждём от пользователя индекс трека
-		try:
-			msg = await client.wait_for('message', check=get_message_check(ctx.author), timeout=10)
-			index = int(msg.content)
-			if index == 0:
-				await ctx.send(embed=MsgEmbed.warning('Отменено'))
-				return False
-			index -= 1
-			if 0 <= index < len(mi_list): mi = mi_list[index]
-			else: await ctx.send(embed=MsgEmbed.warning('Ты кто такой, сука, чтоб это делать?')); return False
-		except asyncio.exceptions.TimeoutError:
-			await ctx.send(embed=MsgEmbed.warning('Кто не успел - тот опоздал'))
-			return False
-
-		# пытаемся добавить трек в плейлист
-		if server.playlist.add(mi): await ctx.send(embed=MsgEmbed.info(f'Добавил: {mi.artist} - {mi.title}'))
-		else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!')); return False
-	elif user_pl_ans is None:
-		return False
-	else:
-		def nice_embed(msg):
-			return MsgEmbed.info(f'Добавлено: {added_songs}/{songs_count}. Ошибки: {error_songs}\n{msg}')
-
-		added_songs = 0
-		songs_count = len(mi_list)
+	async def add_all():
+		added_songs, songs_count = 0, len(mi_list)
 		message = await ctx.send(embed=MsgEmbed.info('Загрузка плейлиста...'))
 		for mi in mi_list:
 			if server.playlist.add(mi): added_songs += 1
 		if added_songs == songs_count:
 			await message.edit(embed=MsgEmbed.ok('Все песни успешно добавлены!'))
+			return True
 		elif added_songs == 0:
-			await message.edit(embed=MsgEmbed.warning('Ни одна песня не была добавлена!')); return False
+			await message.edit(embed=MsgEmbed.warning('Ни одна песня не была добавлена!'))
+			return False
 		else:
 			await message.edit(embed=MsgEmbed.warning(f'Добавлено: {added_songs}/{songs_count}'))
+			return True
 
-	return True
+	async def add_one():
+		songs_list = [f' {mi.artist} - {mi.title}' for mi in mi_list]
+		songs_list.insert(0, 'Отмена')
+		answer = await ask_user(ctx, 'выбери песню', songs_list, icon_url = icons['search'])
+		if answer is None: return None
+		if answer == 0: return await cancel()
+		if 1 <= answer <= len(mi_list): mi = mi_list[answer - 1]
+		else: return bad_answer()
+		if server.playlist.add(mi): await ctx.send(embed=MsgEmbed.ok(f'Добавил: {mi.artist} - {mi.title}'))
+		else: await ctx.send(embed=MsgEmbed.error('Ошибка добавления!'))
+
+	async def load_playlist():
+		method = {
+			0 : cancel,
+			1 : add_one,
+			2 : add_all,
+			None : lambda: None
+		}.get(await ask_user(ctx, 'че ты хочешь?', ['Отмена', 'Одна песня', 'Весь плейлист']), bad_answer)
+		return await method()
+
+	server = get_server(ctx) # используется в подпрограммах (server.playlist)
+
+	if len(args) == 0:
+		await ctx.send(embed=MsgEmbed.error('Нифига ты быдло'))
+		return
+
+	# я не смог избавиться от флага
+	if args[0] == '--id':
+		if len(args) < 2: await ctx.send(embed=MsgEmbed.error('Недосдача по аргументам, жмот')); return
+		if len(args) > 2: await ctx.send(embed=MsgEmbed.warning('Слишком много аргументов'))
+		mi_list = VkSearch.byPlaylistId(args[1])
+		is_playlist = True
+	elif VkSearch.isCorrectPlaylistUrl(args[0]):
+		if len(args) > 1: await ctx.send(embed=MsgEmbed.warning('Слишком много аргументов'))
+		mi_list = VkSearch.byPlaylistUrl(args[0])
+		is_playlist = True
+	else:
+		mi_list = VkSearch.byString(' '.join(args), 5)
+		is_playlist = False
+		return await add_one()
+	
+	if mi_list is None: await ctx.send(embed=MsgEmbed.error('Ошибка поиска!')); return
+	if mi_list == []: await ctx.send(embed=MsgEmbed.warning('Ничего не найдено!')); return False
+	
+	if is_playlist: return await load_playlist()
+	else: return await add_one()
 
 
 @client.command(aliases=['r'])
