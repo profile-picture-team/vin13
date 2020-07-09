@@ -183,31 +183,52 @@ async def on_command_error(ctx, error):
 
 @client.event
 async def on_voice_state_update(member, before, after):
-	before_channel = before.channel
-	after_channel = after.channel
-	if before_channel is None: return
-	if after_channel is not None and before_channel.id == after_channel.id: return
-	sid = before_channel.guild.id
-	if not sid in servers: return
-	server = servers[sid]
-	voice = server.voice
-	if voice is None: return
-	bot_id = client.user.id
+	before_channel = before.channel # это понятно
+	after_channel = after.channel # это тоже
+	if before_channel is None: return # если нечего ещё смотреть, выходим
+	# если просто кто-то подключился к каналу, выходим
+	if after_channel and before_channel.id == after_channel.id: return 
+	sid = before_channel.guild.id # это понятно (sid - server id)
+	if not sid in servers: return # если нам нечего взять, выходим
+	server = servers[sid] # это понятно
+	voice = server.voice # это тоже
+	if voice is None: return # если нам нечего взять, выходим
+	bot_id = client.user.id # это понятно
+	def is_it_only_robots(members): # это тоже, но объясню, если весь канал состоит из ботов, то True, в противном случае False
+		for member in members:
+			if member.bot == False:
+				return False
+		return True
+	async def disconnect_with_msg(msg): # это понятно
+		await voice.disconnect() # это тоже
+		await server.ctx.send(embed = MsgEmbed.hearts(msg)) # и это
+	voice_members = voice.channel.members
+	if len(voice_members) > 1: # если мы не одни
+		# если мы не одни и тут только боты, отключаемся
+		if is_it_only_robots(voice_members): await disconnect_with_msg('Пока-пока, безчувственные машины')
+		return # это понятно
 	before_members = before_channel.members
-	if len(before_members) != 1 or before_members[0].bot == True and before_members[0].id != bot_id: return
-	if len(voice.channel.members) > 1: return
-	if after_channel and after_channel.members[0].id == bot_id: 
-		await voice.move_to(before_channel)
-		await server.ctx.send(embed = MsgEmbed.hearts('Не надо стесняться'))
-		return
-	if voice.channel.id != before_channel.id: return
+	if after_channel and after_channel.members[0].id == bot_id: # если нас переместили, то преследуем
+		await voice.disconnect()
+		try: voice = await before_channel.connect() # само преследование (почему говнокодим, я объясняю в конце функции)
+		except asyncio.exceptions.TimeoutError: await disconnect_with_msg('Ай-яй-яй') # если мы не смогли преследовать (нет прав), то отключаемся
+		else: await server.ctx.send(embed = MsgEmbed.hearts('Не надо стесняться')); server.voice = voice
+		# тут преследование удастся в любом случае, но если поменять со скоростью света права before_channel, то преследование не удастся
+		return # это понятно
+	if voice.channel.id != before_channel.id: return # я уже забыл, зачем оно
 	if voice.is_connected(): 
-		if after_channel is None:
-			await voice.disconnect()
-			await server.ctx.send(embed = MsgEmbed.hearts('Пока-пока'))
-		else: 
-			await voice.move_to(after.channel)
-			await server.ctx.send(embed = MsgEmbed.hearts(f'Ты куда, {after_channel.members[0].mention}?'))
+		# нас кикают или никого не осталось, отключаемя
+		if after_channel is None: await disconnect_with_msg('Пока-пока') 
+		else: # от нас уходят в другой канал, преследуем
+			after_members = after_channel.members # это понятно
+			a_mention = after_members[len(after_members) - 1].mention # это тоже
+			await voice.disconnect() # читабельность, пока
+			try: voice = await after_channel.connect(timeout=5) # само преследование 
+			except asyncio.exceptions.TimeoutError: await disconnect_with_msg(f'Увидимся, {a_mention}') # если мы не смогли преследовать (нет прав), то отключаемся (я бы ещё юзера нахер послал, но ладно)
+			else: await server.ctx.send(embed = MsgEmbed.hearts(f'Ты куда, {a_mention}?')); server.voice = voice
+		# почему voice.disconnect() и channel.connect() вместо voice.move_to(channel)?
+		# discord.py не изменяет (или не успевает) voice.channel после voice.move_to, так что пишем костыли, да...
+		# остальной говнокод никак не оправдать, просто не смотри на него
 
 #endregion
 
