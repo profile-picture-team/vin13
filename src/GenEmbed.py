@@ -1,7 +1,7 @@
-import discord
+from discord import Embed
+from typing import Callable
 
-
-class MsgEmbed:
+class _MsgEmbed:
 	""" Генератор сообщений в discord.Embed'ах """
 
 	class Types:
@@ -13,36 +13,16 @@ class MsgEmbed:
 		hearts  = (0xd72d42, "{msg} :two_hearts:")
 
 
-	def get(type: Types, msg: str) -> discord.Embed:
+	def __getattr__(self, name) -> Callable[[str], Embed]:
+		def wrapper(msg: str) -> Embed:
+			return self.get(getattr(self.Types, name), msg)
+		return wrapper
+
+
+	def get(self, type: Types, msg: str) -> Embed:
 		""" Возвращает discord.Embed типа type с сообщением msg """
 		color, msg_template = type
-		return discord.Embed(description=msg_template.format(msg=msg), colour=color)
+		return Embed(description=msg_template.format(msg=msg), colour=color)
 
-	
-	def info(msg: str) -> discord.Embed:
-		""" Возвращает discord.Embed типа info с сообщением msg """
-		color, msg_template = MsgEmbed.Types.info
-		return discord.Embed(description=msg_template.format(msg=msg), colour=color)
 
-	
-	def ok(msg: str) -> discord.Embed:
-		""" Возвращает discord.Embed типа ok с сообщением msg """
-		color, msg_template = MsgEmbed.Types.ok
-		return discord.Embed(description=msg_template.format(msg=msg), colour=color)
-
-	
-	def warning(msg: str) -> discord.Embed:
-		""" Возвращает discord.Embed типа warning с сообщением msg """
-		color, msg_template = MsgEmbed.Types.warning
-		return discord.Embed(description=msg_template.format(msg=msg), colour=color)
-
-	
-	def error(msg: str) -> discord.Embed:
-		""" Возвращает discord.Embed типа error с сообщением msg """
-		color, msg_template = MsgEmbed.Types.error
-		return discord.Embed(description=msg_template.format(msg=msg), colour=color)
-
-	def hearts(msg: str) -> discord.Embed:
-		""" Возвращает discord.Embed типа hearts с сообщением msg """
-		color, msg_template = MsgEmbed.Types.hearts
-		return discord.Embed(description=msg_template.format(msg=msg), colour=color)
+MsgEmbed = _MsgEmbed()
